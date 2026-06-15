@@ -21,7 +21,7 @@ st.set_page_config(
 )
 
 st.title("AI 模拟面试与能力提升平台")
-st.caption("Day 6 MVP：完善文档、自检、LLM 配置支持和提交准备")
+st.caption("Day 7 Final：最终提交版，完成文档、测试和演示准备")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -535,3 +535,11 @@ with tab6:
     st.write("- 项目设计文档初稿：`docs/design_document_draft.md`")
     st.write("- 演示视频脚本：`docs/demo_script.md`")
     st.write("- 测试清单：`docs/test_checklist.md`")
+
+
+    st.markdown("### Day 7 最终提交建议")
+    st.write("1. 运行 self_check.py 并确保通过。")
+    st.write("2. 测试 LLM 连接，确保简历解析结果中的 `_parser` 为 `llm`。")
+    st.write("3. 完成一次完整面试流程，生成评分报告。")
+    st.write("4. 按 docs/demo_script.md 录制不超过 8 分钟演示视频。")
+    st.write("5. 上传 GitHub，并提交项目设计文档与视频。")
