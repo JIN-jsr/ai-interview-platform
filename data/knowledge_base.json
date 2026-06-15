@@ -1,0 +1,50 @@
+[
+  {
+    "id": "db_001",
+    "category": "数据库",
+    "tags": [
+      "MySQL",
+      "索引",
+      "数据库"
+    ],
+    "difficulty": "medium",
+    "question": "数据库索引的作用是什么？",
+    "answer": "索引可以加快数据查询速度，但会占用额外存储空间，并降低部分写入、更新和删除操作的效率。",
+    "follow_up": [
+      "什么情况下索引可能失效？",
+      "B+ 树索引有什么特点？"
+    ],
+    "source": "课程资料与公开资料整理"
+  },
+  {
+    "id": "python_001",
+    "category": "编程语言",
+    "tags": [
+      "Python",
+      "list",
+      "tuple"
+    ],
+    "difficulty": "easy",
+    "question": "Python 中 list 和 tuple 有什么区别？",
+    "answer": "list 是可变序列，tuple 是不可变序列。list 适合动态修改，tuple 适合固定结构数据。",
+    "follow_up": [
+      "为什么 tuple 可以作为字典 key？"
+    ],
+    "source": "Python 官方文档与课程资料整理"
+  },
+  {
+    "id": "algo_001",
+    "category": "数据结构与算法",
+    "tags": [
+      "时间复杂度",
+      "算法"
+    ],
+    "difficulty": "easy",
+    "question": "什么是时间复杂度？",
+    "answer": "时间复杂度用于描述算法运行时间随输入规模增长的变化趋势，常见表示包括 O(1)、O(n)、O(n log n) 等。",
+    "follow_up": [
+      "如何比较 O(n) 和 O(n log n)？"
+    ],
+    "source": "数据结构课程资料整理"
+  }
+]
