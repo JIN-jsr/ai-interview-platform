@@ -4,6 +4,7 @@ from datetime import datetime
 import streamlit as st
 
 from src.answer_analyzer import analyze_answer, summarize_interview_records
+from src.evaluator import build_final_report, report_to_markdown
 from src.interviewer import get_next_question, prepare_rag_items_for_interview
 from src.llm_client import get_llm_config, is_llm_enabled
 from src.profile_generator import generate_profile_from_parsed_resume
@@ -18,7 +19,7 @@ st.set_page_config(
 )
 
 st.title("AI 模拟面试与能力提升平台")
-st.caption("Day 4 MVP：增强连续面试、上下文记忆、回答分析和基于回答的追问")
+st.caption("Day 5 MVP：正式五维度评分反馈报告")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -42,6 +43,8 @@ if "interview_records" not in st.session_state:
     st.session_state.interview_records = []
 if "followup_count" not in st.session_state:
     st.session_state.followup_count = 0
+if "final_report" not in st.session_state:
+    st.session_state.final_report = None
 
 with st.sidebar:
     st.header("设置")
@@ -132,6 +135,7 @@ with tab1:
         st.session_state.current_question_meta = None
         st.session_state.interview_records = []
         st.session_state.followup_count = 0
+        st.session_state.final_report = None
         st.rerun()
 
     if parse_btn:
@@ -157,6 +161,7 @@ with tab1:
             st.session_state.current_question_meta = None
             st.session_state.interview_records = []
             st.session_state.followup_count = 0
+            st.session_state.final_report = None
             st.success("简历解析完成，并已生成 RAG 推荐问题。")
 
     if save_btn:
@@ -269,6 +274,7 @@ with tab3:
                 st.session_state.current_question_meta = None
                 st.session_state.interview_records = []
                 st.session_state.followup_count = 0
+                st.session_state.final_report = None
                 st.rerun()
     else:
         st.warning("请先在「简历输入与解析」页面生成用户画像。")
@@ -352,21 +358,89 @@ with tab4:
         )
 
 with tab5:
-    st.subheader("面试评分报告")
-    st.info("Day 4 版本提供过程分析和临时评分。Day 5 会完成正式五维度评分报告。")
+    st.subheader("正式面试评分报告")
+    st.info("Day 5 已加入正式五维度评分：基础知识 25%、项目理解 25%、回答逻辑 20%、表达完整性 15%、岗位匹配度 15%。")
 
-    summary = summarize_interview_records(st.session_state.interview_records)
-    demo_report = {
-        "当前回答数量": summary["total_answers"],
-        "临时平均分": summary["average_temp_score"],
-        "高频技术关键词": summary["frequent_keywords"],
-        "常见问题": summary["common_problems"],
-        "正式评分维度": {
-            "基础知识掌握程度": "Day 5 生成",
-            "项目理解深度": "Day 5 生成",
-            "回答逻辑性": "Day 5 生成",
-            "表达完整性": "Day 5 生成",
-            "岗位匹配度": "Day 5 生成"
-        }
-    }
-    st.json(demo_report)
+    records = st.session_state.interview_records
+    profile = st.session_state.profile or {}
+
+    col_report, col_clear_report = st.columns([1, 1])
+    with col_report:
+        generate_report_btn = st.button("生成正式评分报告", type="primary")
+    with col_clear_report:
+        if st.button("清空评分报告"):
+            st.session_state.final_report = None
+            st.rerun()
+
+    if generate_report_btn:
+        if not records:
+            st.warning("还没有面试记录。请先完成至少几轮模拟面试。")
+        else:
+            st.session_state.final_report = build_final_report(records, profile)
+            st.success("正式评分报告已生成。")
+
+    report = st.session_state.final_report
+
+    if report:
+        st.markdown("### 总体结果")
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("总分", f"{report['total_score']} / 100")
+        col_b.metric("等级", report["level"])
+        col_c.metric("回答数量", report["interview_summary"]["answer_count"])
+
+        st.markdown("### 五维度评分")
+        for dim, detail in report["dimension_details"].items():
+            score = float(detail["score"])
+            st.write(f"**{dim}**（权重 {detail['weight']}）：{score} / 100")
+            st.progress(min(100, int(score)) / 100)
+
+        st.markdown("### 评分依据")
+        for dim, detail in report["dimension_details"].items():
+            with st.expander(f"{dim}｜{detail['score']} 分｜权重 {detail['weight']}"):
+                for ev in detail.get("evidence", []):
+                    st.write(f"- {ev}")
+
+        st.markdown("### 表现较好的方面")
+        for item in report.get("strengths", []):
+            st.write(f"- {item}")
+
+        st.markdown("### 主要问题")
+        for item in report.get("main_problems", []):
+            st.write(f"- {item}")
+
+        st.markdown("### 后续提升建议")
+        for item in report.get("recommendations", []):
+            st.write(f"- {item}")
+
+        st.markdown("### 报告原始 JSON")
+        with st.expander("查看报告 JSON", expanded=False):
+            st.json(report)
+
+        json_text = json.dumps(report, ensure_ascii=False, indent=2)
+        md_text = report_to_markdown(report)
+
+        col_json, col_md = st.columns(2)
+        with col_json:
+            st.download_button(
+                "下载评分报告 JSON",
+                data=json_text,
+                file_name=f"final_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json"
+            )
+        with col_md:
+            st.download_button(
+                "下载评分报告 Markdown",
+                data=md_text,
+                file_name=f"final_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+                mime="text/markdown"
+            )
+    else:
+        summary = summarize_interview_records(records)
+        st.markdown("### 当前过程摘要")
+        st.json({
+            "当前回答数量": summary["total_answers"],
+            "临时平均分": summary["average_temp_score"],
+            "高频技术关键词": summary["frequent_keywords"],
+            "常见问题": summary["common_problems"],
+            "提示": "完成几轮面试后，点击“生成正式评分报告”。"
+        })
