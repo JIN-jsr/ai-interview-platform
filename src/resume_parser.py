@@ -117,7 +117,7 @@ def heuristic_resume_parse(text: str) -> Dict[str, Any]:
 def parse_resume_with_llm(text: str) -> Dict[str, Any]:
     messages = [
         {"role": "system", "content": RESUME_PARSE_SYSTEM_PROMPT},
-        {"role": "user", "content": RESUME_PARSE_USER_PROMPT.format(resume_text=text[:12000])}
+        {"role": "user", "content": RESUME_PARSE_USER_PROMPT.replace("{resume_text}", text[:12000])}
     ]
     content = call_chat(messages=messages, temperature=0.1)
     return extract_json_from_text(content)

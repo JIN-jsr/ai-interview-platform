@@ -23,6 +23,15 @@ def get_llm_config() -> Dict[str, str]:
     }
 
 
+def get_masked_api_key() -> str:
+    key = get_llm_config().get("api_key", "")
+    if not key:
+        return ""
+    if len(key) <= 8:
+        return "*" * len(key)
+    return key[:4] + "*" * (len(key) - 8) + key[-4:]
+
+
 def is_llm_enabled() -> bool:
     config = get_llm_config()
     return (
@@ -61,6 +70,54 @@ def call_chat(
     response.raise_for_status()
     data = response.json()
     return data["choices"][0]["message"]["content"]
+
+
+def test_llm_connection() -> Dict[str, Any]:
+    """Run a very small LLM call to check whether configuration works."""
+    config = get_llm_config()
+    if not is_llm_enabled():
+        return {
+            "ok": False,
+            "message": "LLM 未启用。请确认 .env 中 USE_LLM=true，并填写 API Key、Base URL 和模型名称。",
+            "config": {
+                "base_url": config.get("base_url", ""),
+                "model_name": config.get("model_name", ""),
+                "api_key": get_masked_api_key(),
+                "use_llm": config.get("use_llm", "")
+            }
+        }
+
+    try:
+        content = call_chat(
+            messages=[
+                {"role": "system", "content": "You are a concise test assistant."},
+                {"role": "user", "content": "请只回复 OK，用于测试 API 是否可用。"}
+            ],
+            temperature=0.0,
+            timeout=30
+        )
+        return {
+            "ok": True,
+            "message": "LLM 连接测试成功。",
+            "response": content,
+            "config": {
+                "base_url": config.get("base_url", ""),
+                "model_name": config.get("model_name", ""),
+                "api_key": get_masked_api_key(),
+                "use_llm": config.get("use_llm", "")
+            }
+        }
+    except Exception as exc:
+        return {
+            "ok": False,
+            "message": f"LLM 连接测试失败：{exc}",
+            "config": {
+                "base_url": config.get("base_url", ""),
+                "model_name": config.get("model_name", ""),
+                "api_key": get_masked_api_key(),
+                "use_llm": config.get("use_llm", "")
+            }
+        }
 
 
 def extract_json_from_text(text: str) -> Dict[str, Any]:

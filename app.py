@@ -6,7 +6,9 @@ import streamlit as st
 from src.answer_analyzer import analyze_answer, summarize_interview_records
 from src.evaluator import build_final_report, report_to_markdown
 from src.interviewer import get_next_question, prepare_rag_items_for_interview
-from src.llm_client import get_llm_config, is_llm_enabled
+from pathlib import Path
+
+from src.llm_client import get_llm_config, get_masked_api_key, is_llm_enabled, test_llm_connection
 from src.profile_generator import generate_profile_from_parsed_resume
 from src.rag_retriever import get_kb_stats, retrieve_by_profile, retrieve_by_query
 from src.resume_file_loader import read_uploaded_resume
@@ -19,7 +21,7 @@ st.set_page_config(
 )
 
 st.title("AI 模拟面试与能力提升平台")
-st.caption("Day 5 MVP：正式五维度评分反馈报告")
+st.caption("Day 6 MVP：完善文档、自检、LLM 配置支持和提交准备")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -79,12 +81,13 @@ with st.sidebar:
     st.write(f"已记录回答：{len(st.session_state.interview_records)}")
     st.write(f"上下文追问次数：{st.session_state.followup_count}")
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "1. 简历输入与解析",
     "2. RAG 知识库",
     "3. 模拟面试",
     "4. 面试记录与分析",
-    "5. 评分报告"
+    "5. 评分报告",
+    "6. 项目说明与自检"
 ])
 
 with tab1:
@@ -444,3 +447,91 @@ with tab5:
             "常见问题": summary["common_problems"],
             "提示": "完成几轮面试后，点击“生成正式评分报告”。"
         })
+
+with tab6:
+    st.subheader("项目说明与提交前自检")
+
+    st.markdown("### 核心闭环")
+    st.code(
+        "简历输入/解析 → 用户画像 → RAG 检索 → 连续面试 → 项目追问 → 回答分析 → 五维度评分报告",
+        language="text"
+    )
+
+    st.markdown("### LLM 配置状态")
+    llm_config = get_llm_config()
+    st.json({
+        "USE_LLM": llm_config.get("use_llm", ""),
+        "MODEL_NAME": llm_config.get("model_name", ""),
+        "LLM_BASE_URL": llm_config.get("base_url", ""),
+        "LLM_API_KEY": get_masked_api_key() or "未配置",
+        "enabled": is_llm_enabled()
+    })
+
+    if st.button("测试 LLM 连接", type="primary"):
+        result = test_llm_connection()
+        if result.get("ok"):
+            st.success(result.get("message"))
+        else:
+            st.error(result.get("message"))
+        st.json(result)
+
+    st.markdown("### 项目文件检查")
+    required_files = [
+        "app.py",
+        "requirements.txt",
+        "README.md",
+        ".env.example",
+        "data/knowledge_base.json",
+        "data/sample_resume.txt",
+        "src/llm_client.py",
+        "src/resume_parser.py",
+        "src/rag_retriever.py",
+        "src/interviewer.py",
+        "src/answer_analyzer.py",
+        "src/evaluator.py",
+        "docs/llm_config_guide.md",
+        "docs/rag_build_guide.md",
+        "docs/design_document_draft.md",
+        "docs/demo_script.md",
+        "docs/test_checklist.md",
+        "scripts/self_check.py",
+    ]
+    root = Path(".")
+    check_rows = []
+    for rel in required_files:
+        check_rows.append({
+            "file": rel,
+            "exists": (root / rel).exists()
+        })
+    st.dataframe(check_rows, use_container_width=True)
+
+    st.markdown("### 提交前检查清单")
+    checklist = [
+        "项目能通过 streamlit run app.py 正常启动",
+        "可以解析简历并生成用户画像",
+        "RAG 知识库显示 80 条并能检索",
+        "模拟面试能连续进行并触发追问",
+        "面试记录与分析页面有记录",
+        "评分报告能生成总分、五维度评分和建议",
+        "LLM 连接测试成功",
+        ".env 未上传到 GitHub",
+        "README、RAG 构建说明、设计文档初稿已准备",
+        "演示视频脚本已准备"
+    ]
+    for item in checklist:
+        st.write(f"- [ ] {item}")
+
+    st.markdown("### 推荐命令")
+    st.code(
+        ".venv\\Scripts\\activate\n"
+        "python scripts/self_check.py\n"
+        "streamlit run app.py",
+        language="bash"
+    )
+
+    st.markdown("### 文档位置")
+    st.write("- LLM 配置教程：`docs/llm_config_guide.md`")
+    st.write("- RAG 构建说明：`docs/rag_build_guide.md`")
+    st.write("- 项目设计文档初稿：`docs/design_document_draft.md`")
+    st.write("- 演示视频脚本：`docs/demo_script.md`")
+    st.write("- 测试清单：`docs/test_checklist.md`")

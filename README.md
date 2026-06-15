@@ -1,54 +1,47 @@
 # AI 模拟面试与能力提升平台
 
-本项目是利兹科技月 AI 模拟面试软件开发赛的 Day 5 MVP 版本。
+本项目是利兹科技月 AI 模拟面试软件开发赛的 Day 6 版本。
 
-## 当前已完成
+## 项目简介
 
-Day 1：
+本系统面向计算机相关专业学生，提供简历驱动的 AI 模拟技术面试训练。系统支持简历输入或上传，自动生成用户画像与面试重点，并结合 RAG 知识库进行基础知识考察、项目经历深挖、连续追问和五维度评分反馈。
 
-- Streamlit 前端页面
-- 简历文本输入框
-- 基础用户画像展示
-- 模拟面试聊天区域
-- 评分报告展示区域
-- 基础项目目录结构
+## 已完成核心闭环
 
-Day 2：
+```text
+简历输入/解析
+↓
+用户画像与面试重点生成
+↓
+RAG 知识库检索
+↓
+连续文字模拟面试
+↓
+项目经历深挖
+↓
+基于回答内容的追问
+↓
+回答记录与分析
+↓
+五维度评分报告
+```
 
-- 支持 TXT / PDF / DOCX 简历上传
-- 支持直接粘贴简历文本
-- 新增结构化简历解析模块
-- 支持大语言模型解析，未配置 API 时自动使用本地规则解析
-- 解析结果统一输出为 JSON
-- 根据解析结果生成用户画像和面试重点
+## 功能清单
 
-Day 3：
-
-- 扩展 `data/knowledge_base.json` 至 80 条有效知识条目
-- 新增 RAG 检索模块
-- 支持根据简历用户画像自动推荐基础知识问题
-- 将 RAG 基础知识问题接入模拟面试流程
-
-Day 4：
-
-- 新增回答分析模块
-- 支持记录每一轮问题、用户回答、问题类型、知识点 ID 和参考答案
-- 支持根据用户回答中的技术关键词进行项目追问
-- 新增“面试记录与分析”页面
-- 支持下载面试记录 JSON
-
-Day 5：
-
-- 完成正式五维度评分报告模块 `src/evaluator.py`
-- 评分维度与赛题要求一致：
-  - 基础知识掌握程度：25%
-  - 项目理解深度：25%
-  - 回答逻辑性：20%
-  - 表达完整性：15%
-  - 岗位匹配度：15%
-- 支持展示总分、等级、维度分数、评分依据、主要问题和提升建议
-- 支持下载评分报告 JSON 和 Markdown
-- 评分结果基于面试记录、RAG 参考答案覆盖度、回答长度、逻辑结构和岗位技能匹配度生成
+- TXT / PDF / DOCX 简历上传
+- 直接粘贴简历文本
+- 结构化简历解析 JSON
+- 用户画像与面试重点
+- 80 条 RAG 知识库
+- RAG 检索测试页面
+- 连续模拟面试
+- 项目经历深挖
+- 基于回答关键词的追问
+- 回答分析与面试记录
+- 正式五维度评分报告
+- JSON / Markdown 报告下载
+- LLM 配置状态与连接测试
+- 项目自检脚本
 
 ## 技术栈
 
@@ -60,40 +53,135 @@ Day 5：
 - python-docx
 - JSON
 
+## 项目结构
+
+```text
+ai_interview_platform/
+├── app.py
+├── requirements.txt
+├── README.md
+├── .env.example
+├── data/
+│   ├── knowledge_base.json
+│   └── sample_resume.txt
+├── src/
+│   ├── llm_client.py
+│   ├── prompts.py
+│   ├── resume_file_loader.py
+│   ├── resume_parser.py
+│   ├── profile_generator.py
+│   ├── rag_retriever.py
+│   ├── interviewer.py
+│   ├── answer_analyzer.py
+│   └── evaluator.py
+├── scripts/
+│   └── self_check.py
+├── docs/
+│   ├── llm_config_guide.md
+│   ├── rag_build_guide.md
+│   ├── design_document_draft.md
+│   ├── demo_script.md
+│   ├── test_checklist.md
+│   └── day6_notes.md
+└── outputs/
+    ├── logs/
+    └── reports/
+```
+
 ## 本地运行方法
 
+### 1. 创建并激活虚拟环境
+
 ```bash
+python -m venv .venv
 .venv\Scripts\activate
+```
+
+### 2. 安装依赖
+
+```bash
 pip install -r requirements.txt
+```
+
+### 3. 运行项目
+
+```bash
 streamlit run app.py
 ```
 
-## Day 5 测试方式
+## LLM 配置
 
-1. 运行系统；
-2. 在第 1 个页面粘贴或上传简历；
-3. 点击“解析简历并生成画像”；
-4. 进入“模拟面试”页面，完成至少 5-7 轮回答；
-5. 进入“面试记录与分析”页面，确认每轮回答有分析记录；
-6. 进入“评分报告”页面，点击“生成正式评分报告”；
-7. 检查是否展示：
-   - 总分
-   - 等级
-   - 五维度评分
-   - 评分依据
-   - 表现较好的方面
-   - 主要问题
-   - 提升建议
-8. 下载评分报告 JSON 或 Markdown。
+复制配置模板：
 
-## 当前说明
+```bash
+copy .env.example .env
+```
 
-Day 5 的评分模块暂时使用可解释规则计算，不依赖 LLM，因此即使 API Key 未配置也可以稳定演示。提交前建议启用 LLM，以增强简历解析、自然追问和最终反馈表达质量。
+编辑 `.env`：
+
+```text
+LLM_API_KEY=你的真实APIKey
+LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+MODEL_NAME=qwen3.7-plus
+USE_LLM=true
+```
+
+然后重启项目，在“项目说明与自检”页面点击“测试 LLM 连接”。
+
+详细教程见：
+
+```text
+docs/llm_config_guide.md
+```
+
+## RAG 知识库说明
+
+知识库文件：
+
+```text
+data/knowledge_base.json
+```
+
+当前包含 80 条有效知识条目，覆盖 Python、Java、数据结构与算法、数据库、网络、操作系统、软件工程和 AI 应用等方向。
+
+详细说明见：
+
+```text
+docs/rag_build_guide.md
+```
+
+## 自检脚本
+
+在项目根目录运行：
+
+```bash
+python scripts/self_check.py
+```
+
+通过后会显示：
+
+```text
+=== Self check passed ===
+```
+
+## 提交前材料
+
+- GitHub 仓库地址
+- 项目设计文档
+- 不超过 8 分钟演示视频
+
+文档初稿和视频脚本见：
+
+```text
+docs/design_document_draft.md
+docs/demo_script.md
+docs/test_checklist.md
+```
 
 ## Git 提交建议
 
 ```bash
 git add .
-git commit -m "Day 5 add final scoring report"
+git commit -m "Day 6 polish docs and LLM configuration support"
 git push
 ```
