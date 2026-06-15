@@ -1,7 +1,564 @@
 [
   {
+    "id": "python_001",
+    "category": "编程语言 Python",
+    "tags": [
+      "Python",
+      "list",
+      "tuple"
+    ],
+    "difficulty": "easy",
+    "question": "Python 中 list 和 tuple 有什么区别？",
+    "answer": "list 是可变序列，可以增删改元素；tuple 是不可变序列，创建后不能修改。list 适合动态数据，tuple 适合固定结构数据。",
+    "follow_up": [
+      "为什么 tuple 可以作为字典 key？",
+      "list 的 append 平均时间复杂度是多少？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "python_002",
+    "category": "编程语言 Python",
+    "tags": [
+      "Python",
+      "dict",
+      "hash"
+    ],
+    "difficulty": "easy",
+    "question": "Python 字典的底层查找为什么通常很快？",
+    "answer": "Python dict 基于哈希表实现，通常可以通过 key 的哈希值快速定位元素，因此平均查找时间复杂度接近 O(1)。",
+    "follow_up": [
+      "哈希冲突是什么？",
+      "为什么可变对象通常不能作为 dict 的 key？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "python_003",
+    "category": "编程语言 Python",
+    "tags": [
+      "Python",
+      "深拷贝",
+      "浅拷贝"
+    ],
+    "difficulty": "medium",
+    "question": "Python 中浅拷贝和深拷贝有什么区别？",
+    "answer": "浅拷贝只复制外层对象，内部嵌套对象仍然共享引用；深拷贝会递归复制内部对象，生成更独立的数据结构。",
+    "follow_up": [
+      "什么场景下浅拷贝会出问题？",
+      "copy.copy 和 copy.deepcopy 有什么区别？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "python_004",
+    "category": "编程语言 Python",
+    "tags": [
+      "Python",
+      "装饰器",
+      "函数"
+    ],
+    "difficulty": "medium",
+    "question": "什么是 Python 装饰器？",
+    "answer": "装饰器本质上是一个接收函数并返回新函数的高阶函数，常用于在不修改原函数代码的情况下添加日志、鉴权、计时等功能。",
+    "follow_up": [
+      "装饰器为什么常配合闭包使用？",
+      "如何保留原函数的 __name__？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "python_005",
+    "category": "编程语言 Python",
+    "tags": [
+      "Python",
+      "生成器",
+      "迭代器"
+    ],
+    "difficulty": "medium",
+    "question": "Python 生成器有什么作用？",
+    "answer": "生成器使用 yield 按需产生数据，可以节省内存，适合处理大文件、流式数据或需要惰性计算的场景。",
+    "follow_up": [
+      "yield 和 return 有什么区别？",
+      "生成器如何降低内存占用？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "python_006",
+    "category": "编程语言 Python",
+    "tags": [
+      "Python",
+      "GIL",
+      "多线程"
+    ],
+    "difficulty": "hard",
+    "question": "什么是 Python GIL？它会带来什么影响？",
+    "answer": "GIL 是 CPython 解释器中的全局解释器锁，使同一时刻通常只有一个线程执行 Python 字节码。它会限制 CPU 密集型多线程程序的并行性能，但对 I/O 密集型任务影响较小。",
+    "follow_up": [
+      "CPU 密集型任务如何绕开 GIL 影响？",
+      "多进程和多线程适合什么场景？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "python_007",
+    "category": "编程语言 Python",
+    "tags": [
+      "Python",
+      "异常处理"
+    ],
+    "difficulty": "easy",
+    "question": "Python 中 try-except-finally 的作用是什么？",
+    "answer": "try 用于包裹可能出错的代码，except 用于捕获并处理异常，finally 中的代码无论是否异常通常都会执行，常用于释放资源。",
+    "follow_up": [
+      "什么时候应该捕获具体异常？",
+      "finally 常用于哪些资源清理场景？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "python_008",
+    "category": "编程语言 Python",
+    "tags": [
+      "Python",
+      "面向对象",
+      "继承"
+    ],
+    "difficulty": "easy",
+    "question": "面向对象编程中的封装、继承、多态分别是什么意思？",
+    "answer": "封装是隐藏内部实现并暴露接口；继承是子类复用父类属性和方法；多态是不同对象对同一接口表现出不同实现。",
+    "follow_up": [
+      "项目中哪里体现了封装？",
+      "继承和组合应该如何选择？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "python_009",
+    "category": "编程语言 Python",
+    "tags": [
+      "Python",
+      "包管理",
+      "虚拟环境"
+    ],
+    "difficulty": "easy",
+    "question": "Python 虚拟环境的作用是什么？",
+    "answer": "虚拟环境为项目提供独立的依赖环境，避免不同项目之间的包版本冲突，也方便通过 requirements.txt 复现运行环境。",
+    "follow_up": [
+      "requirements.txt 有什么作用？",
+      "为什么不建议把依赖都装在全局环境？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "python_010",
+    "category": "编程语言 Python",
+    "tags": [
+      "Python",
+      "文件处理"
+    ],
+    "difficulty": "easy",
+    "question": "Python 中 with open(...) 的好处是什么？",
+    "answer": "with 语句会在代码块结束后自动关闭文件，即使发生异常也能释放资源，代码更安全简洁。",
+    "follow_up": [
+      "如果不用 with，需要手动做什么？",
+      "读取大文件时应该注意什么？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "python_011",
+    "category": "编程语言 Python",
+    "tags": [
+      "Python",
+      "JSON",
+      "数据交换"
+    ],
+    "difficulty": "easy",
+    "question": "JSON 在项目中通常用来做什么？",
+    "answer": "JSON 是一种常见的数据交换格式，适合保存结构化配置、接口数据、模型输出结果等，便于前后端或模块之间传递数据。",
+    "follow_up": [
+      "JSON 和 Python dict 有什么关系？",
+      "如何避免模型输出非法 JSON？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "python_012",
+    "category": "编程语言 Python",
+    "tags": [
+      "Python",
+      "Streamlit",
+      "前端"
+    ],
+    "difficulty": "easy",
+    "question": "Streamlit 适合什么类型的项目？",
+    "answer": "Streamlit 适合快速构建数据应用、AI Demo 和原型系统。它可以用 Python 直接创建网页界面，开发速度快，但复杂交互和大型系统能力不如专业前端框架。",
+    "follow_up": [
+      "Streamlit 和 React/Vue 有什么区别？",
+      "为什么本项目适合先用 Streamlit？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "java_001",
+    "category": "编程语言 Java",
+    "tags": [
+      "Java",
+      "JVM"
+    ],
+    "difficulty": "easy",
+    "question": "JVM 的作用是什么？",
+    "answer": "JVM 是 Java 虚拟机，负责加载、验证和执行字节码，使 Java 程序具备跨平台运行能力。",
+    "follow_up": [
+      "Java 为什么能跨平台？",
+      "字节码是什么？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "java_002",
+    "category": "编程语言 Java",
+    "tags": [
+      "Java",
+      "面向对象"
+    ],
+    "difficulty": "easy",
+    "question": "Java 中接口和抽象类有什么区别？",
+    "answer": "接口强调行为规范，可以多实现；抽象类可以包含状态和部分实现，更适合表达一类对象的共同基础。",
+    "follow_up": [
+      "什么时候用接口？",
+      "什么时候用抽象类？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "java_003",
+    "category": "编程语言 Java",
+    "tags": [
+      "Java",
+      "集合",
+      "HashMap"
+    ],
+    "difficulty": "medium",
+    "question": "HashMap 的基本原理是什么？",
+    "answer": "HashMap 通过哈希表存储键值对，利用 key 的 hash 定位桶位置，冲突时通过链表或红黑树处理，从而实现较快查找。",
+    "follow_up": [
+      "HashMap 为什么线程不安全？",
+      "hashCode 和 equals 有什么关系？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "java_004",
+    "category": "编程语言 Java",
+    "tags": [
+      "Java",
+      "异常"
+    ],
+    "difficulty": "easy",
+    "question": "Java 中 checked exception 和 unchecked exception 有什么区别？",
+    "answer": "checked exception 编译期必须处理或声明抛出；unchecked exception 通常是 RuntimeException 及其子类，编译期不强制处理。",
+    "follow_up": [
+      "空指针异常属于哪类？",
+      "为什么异常不能全部简单 catch？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "java_005",
+    "category": "编程语言 Java",
+    "tags": [
+      "Java",
+      "Spring Boot"
+    ],
+    "difficulty": "medium",
+    "question": "Spring Boot 的主要优势是什么？",
+    "answer": "Spring Boot 通过自动配置、起步依赖和内嵌服务器简化 Spring 项目搭建，适合快速开发后端服务。",
+    "follow_up": [
+      "自动配置是什么？",
+      "Spring Boot 如何启动 Web 服务？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "java_006",
+    "category": "编程语言 Java",
+    "tags": [
+      "Java",
+      "线程",
+      "并发"
+    ],
+    "difficulty": "hard",
+    "question": "Java 中线程池的作用是什么？",
+    "answer": "线程池复用线程，减少频繁创建和销毁线程的开销，并可以控制并发数量、任务队列和拒绝策略，提高系统稳定性。",
+    "follow_up": [
+      "核心线程数和最大线程数有什么区别？",
+      "线程池队列满了怎么办？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "java_007",
+    "category": "编程语言 Java",
+    "tags": [
+      "Java",
+      "垃圾回收",
+      "GC"
+    ],
+    "difficulty": "medium",
+    "question": "Java 垃圾回收解决什么问题？",
+    "answer": "垃圾回收自动回收不再被引用的对象，降低手动内存管理负担，但仍需要关注内存泄漏和 GC 对性能的影响。",
+    "follow_up": [
+      "什么对象可以被回收？",
+      "内存泄漏在 Java 中可能发生吗？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "java_008",
+    "category": "编程语言 Java",
+    "tags": [
+      "Java",
+      "RESTful API"
+    ],
+    "difficulty": "easy",
+    "question": "后端开发中 RESTful API 的基本思想是什么？",
+    "answer": "RESTful API 通常以资源为中心，使用 HTTP 方法表达操作，如 GET 查询、POST 创建、PUT 更新、DELETE 删除。",
+    "follow_up": [
+      "GET 和 POST 有什么区别？",
+      "接口设计为什么要语义清晰？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "algo_001",
+    "category": "数据结构与算法",
+    "tags": [
+      "数据结构",
+      "时间复杂度"
+    ],
+    "difficulty": "easy",
+    "question": "什么是时间复杂度？",
+    "answer": "时间复杂度描述算法运行时间随输入规模增长的趋势，常用 O(1)、O(log n)、O(n)、O(n log n)、O(n^2) 等表示。",
+    "follow_up": [
+      "为什么不用具体秒数衡量算法？",
+      "O(n) 和 O(n log n) 哪个增长更快？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "algo_002",
+    "category": "数据结构与算法",
+    "tags": [
+      "数组",
+      "链表"
+    ],
+    "difficulty": "easy",
+    "question": "数组和链表有什么区别？",
+    "answer": "数组支持按下标快速访问，但插入删除可能需要移动元素；链表插入删除灵活，但随机访问效率较低。",
+    "follow_up": [
+      "什么时候选择数组？",
+      "什么时候选择链表？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "algo_003",
+    "category": "数据结构与算法",
+    "tags": [
+      "栈",
+      "队列"
+    ],
+    "difficulty": "easy",
+    "question": "栈和队列分别是什么？",
+    "answer": "栈是后进先出结构，常用于函数调用、括号匹配；队列是先进先出结构，常用于任务调度、消息排队。",
+    "follow_up": [
+      "递归和栈有什么关系？",
+      "队列在后端系统中有哪些应用？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "algo_004",
+    "category": "数据结构与算法",
+    "tags": [
+      "哈希表",
+      "冲突"
+    ],
+    "difficulty": "medium",
+    "question": "哈希表如何处理哈希冲突？",
+    "answer": "常见方法包括链地址法和开放地址法。链地址法把冲突元素放到同一桶的链表或树中，开放地址法则寻找其他空位置。",
+    "follow_up": [
+      "负载因子是什么？",
+      "哈希表最坏情况为什么会退化？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "algo_005",
+    "category": "数据结构与算法",
+    "tags": [
+      "二叉树",
+      "遍历"
+    ],
+    "difficulty": "easy",
+    "question": "二叉树的前序、中序、后序遍历有什么区别？",
+    "answer": "前序是根-左-右，中序是左-根-右，后序是左-右-根。遍历顺序不同，适合不同问题。",
+    "follow_up": [
+      "如何用递归实现遍历？",
+      "中序遍历二叉搜索树有什么特点？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "algo_006",
+    "category": "数据结构与算法",
+    "tags": [
+      "二叉搜索树",
+      "BST"
+    ],
+    "difficulty": "medium",
+    "question": "二叉搜索树有什么特点？",
+    "answer": "二叉搜索树中每个节点左子树的值小于节点值，右子树的值大于节点值，中序遍历可以得到有序序列。",
+    "follow_up": [
+      "BST 在什么情况下退化？",
+      "平衡树为什么有意义？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "algo_007",
+    "category": "数据结构与算法",
+    "tags": [
+      "排序",
+      "快速排序"
+    ],
+    "difficulty": "medium",
+    "question": "快速排序的基本思想是什么？",
+    "answer": "快速排序选择一个基准值，将数组划分为小于和大于基准的两部分，再递归排序子数组，平均时间复杂度为 O(n log n)。",
+    "follow_up": [
+      "快排最坏情况是什么？",
+      "如何优化基准选择？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "algo_008",
+    "category": "数据结构与算法",
+    "tags": [
+      "排序",
+      "归并排序"
+    ],
+    "difficulty": "medium",
+    "question": "归并排序的基本思想是什么？",
+    "answer": "归并排序采用分治思想，把数组递归拆分成小部分，再合并有序子数组，时间复杂度稳定为 O(n log n)。",
+    "follow_up": [
+      "归并排序为什么需要额外空间？",
+      "它是稳定排序吗？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "algo_009",
+    "category": "数据结构与算法",
+    "tags": [
+      "动态规划",
+      "DP"
+    ],
+    "difficulty": "hard",
+    "question": "动态规划适合解决什么问题？",
+    "answer": "动态规划适合有重叠子问题和最优子结构的问题，通过保存子问题结果避免重复计算。",
+    "follow_up": [
+      "如何定义状态转移方程？",
+      "动态规划和贪心有什么区别？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "algo_010",
+    "category": "数据结构与算法",
+    "tags": [
+      "贪心算法"
+    ],
+    "difficulty": "medium",
+    "question": "贪心算法的核心思想是什么？",
+    "answer": "贪心算法每一步选择当前看起来最优的方案，希望得到全局最优解，但需要证明局部最优能推出全局最优。",
+    "follow_up": [
+      "贪心一定正确吗？",
+      "什么问题适合用贪心？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "algo_011",
+    "category": "数据结构与算法",
+    "tags": [
+      "BFS",
+      "DFS",
+      "图"
+    ],
+    "difficulty": "medium",
+    "question": "BFS 和 DFS 有什么区别？",
+    "answer": "BFS 按层扩展，常用队列，适合最短路径层数问题；DFS 沿路径深入，常用递归或栈，适合搜索连通性、回溯等问题。",
+    "follow_up": [
+      "BFS 为什么能找无权图最短路径？",
+      "DFS 可能造成什么风险？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "algo_012",
+    "category": "数据结构与算法",
+    "tags": [
+      "堆",
+      "优先队列"
+    ],
+    "difficulty": "medium",
+    "question": "堆和优先队列有什么关系？",
+    "answer": "优先队列是一种按优先级取出元素的抽象数据类型，堆是实现优先队列的常见数据结构。",
+    "follow_up": [
+      "大根堆和小根堆区别是什么？",
+      "堆排序的复杂度是多少？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "algo_013",
+    "category": "数据结构与算法",
+    "tags": [
+      "递归",
+      "迭代"
+    ],
+    "difficulty": "easy",
+    "question": "递归和迭代有什么区别？",
+    "answer": "递归通过函数调用自身解决问题，代码表达清晰但可能有栈开销；迭代通过循环完成，通常更节省调用栈空间。",
+    "follow_up": [
+      "递归终止条件为什么重要？",
+      "递归过深可能导致什么问题？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "algo_014",
+    "category": "数据结构与算法",
+    "tags": [
+      "算法",
+      "空间复杂度"
+    ],
+    "difficulty": "easy",
+    "question": "什么是空间复杂度？",
+    "answer": "空间复杂度描述算法运行过程中额外占用内存随输入规模增长的趋势。",
+    "follow_up": [
+      "原地算法是什么意思？",
+      "时间复杂度和空间复杂度如何权衡？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
     "id": "db_001",
-    "category": "数据库",
+    "category": "数据库与缓存",
     "tags": [
       "MySQL",
       "索引",
@@ -14,37 +571,746 @@
       "什么情况下索引可能失效？",
       "B+ 树索引有什么特点？"
     ],
-    "source": "课程资料与公开资料整理"
+    "source": "课程资料、官方文档与公开学习资料整理"
   },
   {
-    "id": "python_001",
-    "category": "编程语言",
+    "id": "db_002",
+    "category": "数据库与缓存",
     "tags": [
-      "Python",
-      "list",
-      "tuple"
+      "MySQL",
+      "事务",
+      "ACID"
     ],
-    "difficulty": "easy",
-    "question": "Python 中 list 和 tuple 有什么区别？",
-    "answer": "list 是可变序列，tuple 是不可变序列。list 适合动态修改，tuple 适合固定结构数据。",
+    "difficulty": "medium",
+    "question": "数据库事务的 ACID 特性是什么？",
+    "answer": "ACID 包括原子性、一致性、隔离性和持久性，用于保证数据库事务可靠执行。",
     "follow_up": [
-      "为什么 tuple 可以作为字典 key？"
+      "事务隔离级别有哪些？",
+      "脏读、不可重复读、幻读分别是什么？"
     ],
-    "source": "Python 官方文档与课程资料整理"
+    "source": "课程资料、官方文档与公开学习资料整理"
   },
   {
-    "id": "algo_001",
-    "category": "数据结构与算法",
+    "id": "db_003",
+    "category": "数据库与缓存",
     "tags": [
-      "时间复杂度",
-      "算法"
+      "MySQL",
+      "隔离级别"
+    ],
+    "difficulty": "hard",
+    "question": "MySQL 常见事务隔离级别有哪些？",
+    "answer": "常见隔离级别包括读未提交、读已提交、可重复读和串行化。隔离级别越高，并发问题越少，但性能开销通常越大。",
+    "follow_up": [
+      "MySQL 默认隔离级别是什么？",
+      "可重复读如何减少幻读问题？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "db_004",
+    "category": "数据库与缓存",
+    "tags": [
+      "MySQL",
+      "B+树",
+      "索引"
+    ],
+    "difficulty": "hard",
+    "question": "为什么 MySQL InnoDB 常用 B+ 树作为索引结构？",
+    "answer": "B+ 树高度较低，适合磁盘页读取；叶子节点有序并通过链表连接，适合范围查询。",
+    "follow_up": [
+      "B 树和 B+ 树有什么区别？",
+      "为什么不用普通二叉树？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "db_005",
+    "category": "数据库与缓存",
+    "tags": [
+      "MySQL",
+      "联合索引"
+    ],
+    "difficulty": "medium",
+    "question": "联合索引的最左前缀原则是什么？",
+    "answer": "联合索引按字段顺序建立，查询条件需要从索引最左侧字段开始连续匹配，才能更好利用索引。",
+    "follow_up": [
+      "联合索引 (a,b,c) 哪些查询能用到索引？",
+      "如何设计联合索引顺序？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "db_006",
+    "category": "数据库与缓存",
+    "tags": [
+      "MySQL",
+      "SQL优化"
+    ],
+    "difficulty": "medium",
+    "question": "SQL 查询优化可以从哪些方面入手？",
+    "answer": "可以从建立合适索引、减少全表扫描、避免返回过多字段、优化 join、查看执行计划、合理分页等方面入手。",
+    "follow_up": [
+      "EXPLAIN 有什么作用？",
+      "为什么 select * 可能不好？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "db_007",
+    "category": "数据库与缓存",
+    "tags": [
+      "数据库",
+      "范式",
+      "表设计"
+    ],
+    "difficulty": "medium",
+    "question": "数据库范式的作用是什么？",
+    "answer": "范式用于减少数据冗余和异常，提高数据一致性。实际项目中也会根据性能需求适当反范式设计。",
+    "follow_up": [
+      "什么是数据冗余？",
+      "为什么有时要反范式？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "db_008",
+    "category": "数据库与缓存",
+    "tags": [
+      "数据库",
+      "主键",
+      "外键"
     ],
     "difficulty": "easy",
-    "question": "什么是时间复杂度？",
-    "answer": "时间复杂度用于描述算法运行时间随输入规模增长的变化趋势，常见表示包括 O(1)、O(n)、O(n log n) 等。",
+    "question": "主键和外键有什么区别？",
+    "answer": "主键用于唯一标识表中的记录；外键用于表示表之间的关联关系，并可维护引用完整性。",
     "follow_up": [
-      "如何比较 O(n) 和 O(n log n)？"
+      "为什么主键通常不应频繁变化？",
+      "外键约束有什么优缺点？"
     ],
-    "source": "数据结构课程资料整理"
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "db_009",
+    "category": "数据库与缓存",
+    "tags": [
+      "Redis",
+      "缓存"
+    ],
+    "difficulty": "medium",
+    "question": "Redis 通常用来解决什么问题？",
+    "answer": "Redis 是内存型键值数据库，常用于缓存、会话存储、计数器、排行榜、消息队列等场景，提高访问速度。",
+    "follow_up": [
+      "为什么 Redis 速度快？",
+      "缓存数据如何设置过期时间？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "db_010",
+    "category": "数据库与缓存",
+    "tags": [
+      "Redis",
+      "缓存穿透"
+    ],
+    "difficulty": "hard",
+    "question": "什么是缓存穿透？如何解决？",
+    "answer": "缓存穿透是查询不存在的数据，导致请求绕过缓存持续打到数据库。常见解决方案包括缓存空值、布隆过滤器和参数校验。",
+    "follow_up": [
+      "缓存击穿和缓存雪崩有什么区别？",
+      "布隆过滤器有什么局限？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "db_011",
+    "category": "数据库与缓存",
+    "tags": [
+      "Redis",
+      "缓存一致性"
+    ],
+    "difficulty": "hard",
+    "question": "缓存和数据库如何保持一致性？",
+    "answer": "常见策略是先更新数据库再删除缓存，结合重试、延迟双删、消息队列等方式降低不一致风险。需要根据业务容忍度设计。",
+    "follow_up": [
+      "为什么不总是先更新缓存？",
+      "缓存删除失败怎么办？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "db_012",
+    "category": "数据库与缓存",
+    "tags": [
+      "数据库",
+      "连接池"
+    ],
+    "difficulty": "medium",
+    "question": "数据库连接池的作用是什么？",
+    "answer": "连接池复用数据库连接，减少频繁创建连接的开销，并限制最大连接数，提升性能和稳定性。",
+    "follow_up": [
+      "连接池过大或过小会怎样？",
+      "项目中如何配置连接池？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "db_013",
+    "category": "数据库与缓存",
+    "tags": [
+      "数据库",
+      "分页"
+    ],
+    "difficulty": "medium",
+    "question": "大数据量分页查询可能有什么问题？",
+    "answer": "offset 很大时数据库需要跳过大量记录，查询变慢。可以使用基于索引的游标分页或条件分页优化。",
+    "follow_up": [
+      "limit offset 为什么慢？",
+      "游标分页有什么限制？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "db_014",
+    "category": "数据库与缓存",
+    "tags": [
+      "数据库",
+      "SQL注入",
+      "安全"
+    ],
+    "difficulty": "medium",
+    "question": "什么是 SQL 注入？如何防止？",
+    "answer": "SQL 注入是攻击者把恶意 SQL 拼入查询语句执行。常见防护包括参数化查询、ORM、安全过滤和最小权限原则。",
+    "follow_up": [
+      "为什么字符串拼接 SQL 不安全？",
+      "参数化查询如何防注入？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "net_001",
+    "category": "计算机网络",
+    "tags": [
+      "计算机网络",
+      "TCP",
+      "UDP"
+    ],
+    "difficulty": "easy",
+    "question": "TCP 和 UDP 有什么区别？",
+    "answer": "TCP 面向连接、可靠传输、有流量控制和拥塞控制；UDP 无连接、开销小、速度快但不保证可靠性。",
+    "follow_up": [
+      "视频直播为什么常用 UDP？",
+      "HTTP 通常基于 TCP 还是 UDP？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "net_002",
+    "category": "计算机网络",
+    "tags": [
+      "计算机网络",
+      "三次握手",
+      "TCP"
+    ],
+    "difficulty": "medium",
+    "question": "TCP 为什么需要三次握手？",
+    "answer": "三次握手用于确认双方收发能力正常，并同步初始序列号，建立可靠连接。",
+    "follow_up": [
+      "为什么不是两次握手？",
+      "SYN flood 是什么？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "net_003",
+    "category": "计算机网络",
+    "tags": [
+      "计算机网络",
+      "四次挥手",
+      "TCP"
+    ],
+    "difficulty": "medium",
+    "question": "TCP 四次挥手的过程是什么？",
+    "answer": "连接关闭时双方都需要分别发送 FIN 和 ACK，因为 TCP 是全双工通信，双方发送方向需要独立关闭。",
+    "follow_up": [
+      "TIME_WAIT 的作用是什么？",
+      "为什么挥手通常是四次？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "net_004",
+    "category": "计算机网络",
+    "tags": [
+      "HTTP",
+      "HTTPS"
+    ],
+    "difficulty": "easy",
+    "question": "HTTP 和 HTTPS 有什么区别？",
+    "answer": "HTTPS 在 HTTP 基础上加入 TLS/SSL 加密，提供加密传输、身份认证和完整性保护，更安全。",
+    "follow_up": [
+      "HTTPS 为什么需要证书？",
+      "TLS 握手大致做什么？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "net_005",
+    "category": "计算机网络",
+    "tags": [
+      "HTTP",
+      "状态码"
+    ],
+    "difficulty": "easy",
+    "question": "常见 HTTP 状态码有哪些？",
+    "answer": "200 表示成功，301/302 表示重定向，400 表示请求错误，401/403 表示认证或权限问题，404 表示资源不存在，500 表示服务器错误。",
+    "follow_up": [
+      "401 和 403 区别是什么？",
+      "接口报 500 应该如何排查？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "net_006",
+    "category": "计算机网络",
+    "tags": [
+      "HTTP",
+      "GET",
+      "POST"
+    ],
+    "difficulty": "easy",
+    "question": "GET 和 POST 有什么区别？",
+    "answer": "GET 通常用于获取资源，参数常在 URL 中；POST 通常用于提交数据，数据在请求体中。GET 应尽量无副作用。",
+    "follow_up": [
+      "GET 请求一定没有请求体吗？",
+      "为什么登录通常用 POST？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "net_007",
+    "category": "计算机网络",
+    "tags": [
+      "DNS",
+      "计算机网络"
+    ],
+    "difficulty": "medium",
+    "question": "DNS 的作用是什么？",
+    "answer": "DNS 将域名解析为 IP 地址，使用户可以通过易记域名访问服务器。",
+    "follow_up": [
+      "DNS 解析失败可能是什么原因？",
+      "浏览器访问网址时 DNS 在哪一步？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "net_008",
+    "category": "计算机网络",
+    "tags": [
+      "网络",
+      "Cookie",
+      "Session"
+    ],
+    "difficulty": "medium",
+    "question": "Cookie 和 Session 有什么区别？",
+    "answer": "Cookie 存在客户端，Session 通常存在服务端。Cookie 可保存会话标识，服务端通过标识找到对应 Session 数据。",
+    "follow_up": [
+      "为什么不能把敏感信息直接放 Cookie？",
+      "JWT 和 Session 有什么区别？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "net_009",
+    "category": "计算机网络",
+    "tags": [
+      "网络",
+      "跨域",
+      "CORS"
+    ],
+    "difficulty": "medium",
+    "question": "什么是跨域问题？",
+    "answer": "跨域是浏览器同源策略限制不同源页面访问资源。服务端可以通过 CORS 响应头允许指定来源访问。",
+    "follow_up": [
+      "什么是同源？",
+      "CORS 是前端解决还是后端配置？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "net_010",
+    "category": "计算机网络",
+    "tags": [
+      "网络",
+      "RESTful API"
+    ],
+    "difficulty": "medium",
+    "question": "如何设计一个清晰的 RESTful 接口？",
+    "answer": "应围绕资源设计 URL，使用合适 HTTP 方法，保持命名一致，返回清晰状态码和错误信息，并考虑权限和分页等问题。",
+    "follow_up": [
+      "接口版本如何设计？",
+      "错误响应应该包含什么？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "os_001",
+    "category": "操作系统",
+    "tags": [
+      "操作系统",
+      "进程",
+      "线程"
+    ],
+    "difficulty": "easy",
+    "question": "进程和线程有什么区别？",
+    "answer": "进程是资源分配的基本单位，线程是 CPU 调度的基本单位。同一进程内线程共享部分资源，切换开销通常小于进程。",
+    "follow_up": [
+      "线程共享哪些资源？",
+      "多进程和多线程如何选择？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "os_002",
+    "category": "操作系统",
+    "tags": [
+      "操作系统",
+      "死锁"
+    ],
+    "difficulty": "medium",
+    "question": "什么是死锁？产生死锁的必要条件有哪些？",
+    "answer": "死锁是多个进程互相等待对方资源导致无法继续。必要条件包括互斥、占有并等待、不可抢占和循环等待。",
+    "follow_up": [
+      "如何预防死锁？",
+      "数据库中也会出现死锁吗？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "os_003",
+    "category": "操作系统",
+    "tags": [
+      "操作系统",
+      "内存管理"
+    ],
+    "difficulty": "medium",
+    "question": "虚拟内存的作用是什么？",
+    "answer": "虚拟内存为进程提供连续独立的地址空间，并通过页表映射到物理内存，提高内存管理和隔离能力。",
+    "follow_up": [
+      "什么是缺页中断？",
+      "虚拟内存是否等于无限内存？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "os_004",
+    "category": "操作系统",
+    "tags": [
+      "操作系统",
+      "调度"
+    ],
+    "difficulty": "medium",
+    "question": "操作系统进程调度的目标是什么？",
+    "answer": "调度目标包括提高 CPU 利用率、缩短响应时间、提高吞吐量、保证公平性和满足优先级需求。",
+    "follow_up": [
+      "时间片轮转是什么？",
+      "短作业优先有什么问题？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "os_005",
+    "category": "操作系统",
+    "tags": [
+      "操作系统",
+      "文件系统"
+    ],
+    "difficulty": "easy",
+    "question": "文件系统的作用是什么？",
+    "answer": "文件系统负责组织、存储和管理文件及目录，提供文件读写、权限、路径和元数据管理。",
+    "follow_up": [
+      "绝对路径和相对路径有什么区别？",
+      "文件权限为什么重要？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "os_006",
+    "category": "操作系统",
+    "tags": [
+      "操作系统",
+      "锁",
+      "并发"
+    ],
+    "difficulty": "medium",
+    "question": "并发编程中锁的作用是什么？",
+    "answer": "锁用于保护共享资源，避免多个线程同时修改导致数据竞争和不一致。",
+    "follow_up": [
+      "锁粒度过大有什么问题？",
+      "如何减少锁竞争？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "os_007",
+    "category": "操作系统",
+    "tags": [
+      "Linux",
+      "命令行"
+    ],
+    "difficulty": "easy",
+    "question": "Linux 常见命令 cd、ls、pwd 分别做什么？",
+    "answer": "cd 用于切换目录，ls 用于列出文件，pwd 用于显示当前工作目录。",
+    "follow_up": [
+      "为什么开发部署常用命令行？",
+      "相对路径 . 和 .. 是什么意思？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "os_008",
+    "category": "操作系统",
+    "tags": [
+      "操作系统",
+      "I/O"
+    ],
+    "difficulty": "medium",
+    "question": "什么是阻塞 I/O 和非阻塞 I/O？",
+    "answer": "阻塞 I/O 在数据准备好前会等待；非阻塞 I/O 如果数据未准备好会立即返回，适合配合事件循环提升并发能力。",
+    "follow_up": [
+      "I/O 密集型任务为什么适合异步？",
+      "异步和多线程有什么区别？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "backend_001",
+    "category": "软件工程与AI应用",
+    "tags": [
+      "后端开发",
+      "MVC",
+      "架构"
+    ],
+    "difficulty": "easy",
+    "question": "MVC 架构的基本思想是什么？",
+    "answer": "MVC 将系统分为 Model、View、Controller，分别负责数据模型、界面展示和请求控制，有助于降低耦合。",
+    "follow_up": [
+      "Streamlit 项目是否严格 MVC？",
+      "分层设计有什么好处？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "backend_002",
+    "category": "软件工程与AI应用",
+    "tags": [
+      "后端开发",
+      "接口",
+      "异常处理"
+    ],
+    "difficulty": "medium",
+    "question": "后端接口为什么需要统一异常处理？",
+    "answer": "统一异常处理可以避免重复代码，保证错误响应格式一致，便于前端处理和日志排查。",
+    "follow_up": [
+      "异常信息是否应该全部返回给用户？",
+      "如何记录错误日志？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "backend_003",
+    "category": "软件工程与AI应用",
+    "tags": [
+      "后端开发",
+      "日志"
+    ],
+    "difficulty": "easy",
+    "question": "日志在后端项目中有什么作用？",
+    "answer": "日志用于记录系统运行状态、错误信息、用户操作和关键流程，方便调试、监控和问题追踪。",
+    "follow_up": [
+      "日志级别有哪些？",
+      "为什么不能记录敏感信息？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "backend_004",
+    "category": "软件工程与AI应用",
+    "tags": [
+      "后端开发",
+      "部署",
+      "环境变量"
+    ],
+    "difficulty": "medium",
+    "question": "为什么 API Key 应该放在环境变量中？",
+    "answer": "API Key 属于敏感信息，放在环境变量或 .env 文件中可以避免硬编码到代码仓库，降低泄露风险。",
+    "follow_up": [
+      "为什么 .env 不能提交 GitHub？",
+      ".env.example 的作用是什么？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "backend_005",
+    "category": "软件工程与AI应用",
+    "tags": [
+      "后端开发",
+      "鉴权"
+    ],
+    "difficulty": "medium",
+    "question": "登录系统中的鉴权和授权有什么区别？",
+    "answer": "鉴权确认用户是谁，授权判断用户是否有权限访问某资源或执行某操作。",
+    "follow_up": [
+      "Token 有什么作用？",
+      "管理员和普通用户权限如何区分？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "frontend_001",
+    "category": "软件工程与AI应用",
+    "tags": [
+      "前端开发",
+      "HTML",
+      "CSS",
+      "JavaScript"
+    ],
+    "difficulty": "easy",
+    "question": "HTML、CSS、JavaScript 分别负责什么？",
+    "answer": "HTML 负责页面结构，CSS 负责样式表现，JavaScript 负责交互逻辑。",
+    "follow_up": [
+      "为什么 Streamlit 可以少写前端代码？",
+      "前后端分离是什么意思？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "frontend_002",
+    "category": "软件工程与AI应用",
+    "tags": [
+      "前端开发",
+      "React",
+      "Vue"
+    ],
+    "difficulty": "easy",
+    "question": "React/Vue 和 Streamlit 有什么区别？",
+    "answer": "React/Vue 是专业前端框架，适合复杂交互和大型前端项目；Streamlit 用 Python 快速生成页面，适合 AI Demo 和数据应用。",
+    "follow_up": [
+      "正式网站为什么常用 React/Vue？",
+      "本项目为什么先用 Streamlit？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "software_001",
+    "category": "软件工程与AI应用",
+    "tags": [
+      "软件工程",
+      "需求分析"
+    ],
+    "difficulty": "easy",
+    "question": "软件开发中需求分析为什么重要？",
+    "answer": "需求分析明确系统目标、用户场景和功能边界，避免开发偏离问题本身。",
+    "follow_up": [
+      "本项目的核心需求是什么？",
+      "如何区分基础功能和拓展功能？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "software_002",
+    "category": "软件工程与AI应用",
+    "tags": [
+      "软件工程",
+      "测试"
+    ],
+    "difficulty": "easy",
+    "question": "软件测试的目的是什么？",
+    "answer": "测试用于发现缺陷、验证功能是否符合需求，并提高系统稳定性和可靠性。",
+    "follow_up": [
+      "单元测试和集成测试有什么区别？",
+      "本项目应该测试哪些流程？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "software_003",
+    "category": "软件工程与AI应用",
+    "tags": [
+      "软件工程",
+      "Git"
+    ],
+    "difficulty": "easy",
+    "question": "Git 在项目开发中有什么作用？",
+    "answer": "Git 用于版本控制，可以记录代码修改历史、回退版本、协作开发并与 GitHub 远程仓库同步。",
+    "follow_up": [
+      "git add、commit、push 分别做什么？",
+      "为什么要写清楚 commit message？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "ai_001",
+    "category": "软件工程与AI应用",
+    "tags": [
+      "人工智能",
+      "机器学习"
+    ],
+    "difficulty": "easy",
+    "question": "机器学习的基本流程是什么？",
+    "answer": "一般包括数据收集、数据预处理、特征处理、模型训练、模型评估、调参和部署应用。",
+    "follow_up": [
+      "训练集和测试集有什么区别？",
+      "为什么需要验证集？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "ai_002",
+    "category": "软件工程与AI应用",
+    "tags": [
+      "人工智能",
+      "过拟合"
+    ],
+    "difficulty": "medium",
+    "question": "什么是过拟合？如何缓解？",
+    "answer": "过拟合是模型在训练集表现很好但泛化到新数据较差。可通过更多数据、正则化、交叉验证、早停、降低模型复杂度等方法缓解。",
+    "follow_up": [
+      "欠拟合是什么？",
+      "如何判断模型过拟合？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "ai_003",
+    "category": "软件工程与AI应用",
+    "tags": [
+      "人工智能",
+      "评价指标"
+    ],
+    "difficulty": "medium",
+    "question": "分类模型常见评价指标有哪些？",
+    "answer": "常见指标包括准确率、精确率、召回率、F1 值、ROC-AUC 等，应结合业务场景选择。",
+    "follow_up": [
+      "准确率什么时候会误导？",
+      "精确率和召回率如何权衡？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
+  },
+  {
+    "id": "ai_004",
+    "category": "软件工程与AI应用",
+    "tags": [
+      "人工智能",
+      "RAG",
+      "大语言模型"
+    ],
+    "difficulty": "medium",
+    "question": "RAG 的基本思想是什么？",
+    "answer": "RAG 先从外部知识库检索相关内容，再把检索结果提供给大语言模型生成回答或问题，从而减少幻觉并增强知识依据。",
+    "follow_up": [
+      "RAG 和普通聊天机器人有什么区别？",
+      "知识库质量为什么重要？"
+    ],
+    "source": "课程资料、官方文档与公开学习资料整理"
   }
 ]

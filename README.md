@@ -1,6 +1,6 @@
 # AI 模拟面试与能力提升平台
 
-本项目是利兹科技月 AI 模拟面试软件开发赛的 Day 2 MVP 版本。
+本项目是利兹科技月 AI 模拟面试软件开发赛的 Day 3 MVP 版本。
 
 ## 当前已完成
 
@@ -21,7 +21,16 @@ Day 2：
 - 支持大语言模型解析，未配置 API 时自动使用本地规则解析
 - 解析结果统一输出为 JSON
 - 根据解析结果生成用户画像和面试重点
-- 支持下载解析结果 JSON
+
+Day 3：
+
+- 扩展 `data/knowledge_base.json` 至 80 条有效知识条目
+- 覆盖 Python、Java、数据结构与算法、数据库与缓存、计算机网络、操作系统、软件工程与 AI 应用等方向
+- 新增 RAG 检索模块 `src/rag_retriever.py`
+- 支持基于关键词的本地知识库检索
+- 支持根据简历用户画像自动推荐基础知识问题
+- 新增 RAG 知识库检查页面
+- 将 RAG 基础知识问题接入模拟面试流程
 
 ## 技术栈
 
@@ -32,14 +41,6 @@ Day 2：
 - pdfplumber
 - python-docx
 - JSON
-
-后续会加入：
-
-- 更完整的 RAG 知识库
-- 向量检索或关键词检索增强
-- 连续面试流程控制
-- 自动评分反馈
-- 面试记录保存
 
 ## 项目结构
 
@@ -68,36 +69,48 @@ ai_interview_platform/
 
 ## 本地运行方法
 
-1. 创建并进入虚拟环境：
-
 ```bash
-python -m venv .venv
 .venv\Scripts\activate
-```
-
-2. 安装依赖：
-
-```bash
 pip install -r requirements.txt
+streamlit run app.py
 ```
 
-3. 运行项目：
+## RAG 知识库说明
 
-```bash
-streamlit run app.py
+知识库文件位于：
+
+```text
+data/knowledge_base.json
+```
+
+每条知识包含：
+
+- id
+- category
+- tags
+- difficulty
+- question
+- answer
+- follow_up
+- source
+
+当前 Day 3 使用本地关键词检索。检索流程为：
+
+```text
+简历解析结果 / 用户画像
+↓
+提取目标岗位、技能、项目关键词
+↓
+与知识库条目的 category、tags、question、answer 匹配
+↓
+按分数排序并做类别多样化
+↓
+返回相关基础知识问题
 ```
 
 ## LLM API Key 配置说明
 
 当前版本支持 OpenAI-compatible API 格式。以阿里百炼 DashScope 兼容模式为例：
-
-1. 复制 `.env.example` 为 `.env`
-
-```bash
-copy .env.example .env
-```
-
-2. 在 `.env` 中填写：
 
 ```text
 LLM_API_KEY=your_api_key_here
@@ -106,23 +119,24 @@ MODEL_NAME=qwen-plus
 USE_LLM=true
 ```
 
-如果不配置 API，系统仍然可以运行，会自动使用本地规则解析简历。
+如果不配置 API，系统仍然可以运行，会自动使用本地规则解析简历和本地 RAG 检索。
 
 注意：不要把真实 `.env` 文件提交到 GitHub。
 
-## Day 2 测试方式
+## Day 3 测试方式
 
-运行系统后，可以：
-
-1. 复制 `data/sample_resume.txt` 中的内容到页面文本框；
-2. 或上传 TXT / PDF / DOCX 简历；
+1. 运行系统；
+2. 在第 1 个页面粘贴或上传简历；
 3. 点击“解析简历并生成画像”；
-4. 检查页面是否输出“结构化简历解析结果”和“用户画像与面试重点”。
+4. 查看系统匹配出的 RAG 基础知识问题；
+5. 打开“RAG 知识库”页面，搜索 `Python MySQL Redis 后端`；
+6. 打开“模拟面试”页面，开始面试；
+7. 检查面试中是否出现与知识库相关的基础知识问题。
 
 ## Git 提交建议
 
 ```bash
 git add .
-git commit -m "Day 2 add structured resume parsing"
+git commit -m "Day 3 add RAG knowledge base and retrieval"
 git push
 ```

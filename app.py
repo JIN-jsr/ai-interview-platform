@@ -3,8 +3,10 @@ from datetime import datetime
 
 import streamlit as st
 
+from src.interviewer import get_next_question, prepare_rag_items_for_interview
 from src.llm_client import get_llm_config, is_llm_enabled
 from src.profile_generator import generate_profile_from_parsed_resume
+from src.rag_retriever import get_kb_stats, load_knowledge_base, retrieve_by_profile, retrieve_by_query
 from src.resume_file_loader import read_uploaded_resume
 from src.resume_parser import parse_resume, simple_resume_summary
 
@@ -15,7 +17,7 @@ st.set_page_config(
 )
 
 st.title("AI 模拟面试与能力提升平台")
-st.caption("Day 2 MVP：支持 TXT/PDF/DOCX 简历读取，结构化简历解析，用户画像与面试重点生成")
+st.caption("Day 3 MVP：扩展 RAG 知识库，支持知识检索，并将 RAG 基础题接入面试流程")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -27,6 +29,12 @@ if "profile" not in st.session_state:
     st.session_state.profile = None
 if "interview_started" not in st.session_state:
     st.session_state.interview_started = False
+if "rag_items" not in st.session_state:
+    st.session_state.rag_items = []
+if "rag_index" not in st.session_state:
+    st.session_state.rag_index = 0
+if "question_meta" not in st.session_state:
+    st.session_state.question_meta = []
 
 with st.sidebar:
     st.header("设置")
@@ -50,10 +58,12 @@ with st.sidebar:
         st.caption("配置 .env 后可启用大模型结构化解析")
 
     st.divider()
-    st.write("当前版本：Day 2 简历解析模块")
-    st.write("下一步：扩展 RAG 知识库并实现检索提问")
+    st.subheader("RAG 知识库")
+    kb_stats = get_kb_stats()
+    st.write(f"知识条目数：{kb_stats['total_entries']}")
+    st.caption("Day 3 使用本地关键词检索，Day 4/5 可继续增强。")
 
-tab1, tab2, tab3 = st.tabs(["1. 简历输入与解析", "2. 模拟面试", "3. 评分报告"])
+tab1, tab2, tab3, tab4 = st.tabs(["1. 简历输入与解析", "2. RAG 知识库", "3. 模拟面试", "4. 评分报告"])
 
 with tab1:
     st.subheader("输入或上传简历")
@@ -97,6 +107,9 @@ with tab1:
         st.session_state.parsed_resume = None
         st.session_state.profile = None
         st.session_state.interview_started = False
+        st.session_state.rag_items = []
+        st.session_state.rag_index = 0
+        st.session_state.question_meta = []
         st.rerun()
 
     if parse_btn:
@@ -111,10 +124,13 @@ with tab1:
                     target_role=target_role,
                     difficulty=difficulty
                 )
+                rag_items = retrieve_by_profile(profile, top_k=6)
 
             st.session_state.parsed_resume = parsed_resume
             st.session_state.profile = profile
-            st.success("简历解析完成。")
+            st.session_state.rag_items = rag_items
+            st.session_state.rag_index = 0
+            st.success("简历解析完成，并已生成 RAG 推荐问题。")
 
     if save_btn:
         if not st.session_state.parsed_resume:
@@ -146,19 +162,82 @@ with tab1:
         st.markdown("### 用户画像与面试重点")
         st.json(st.session_state.profile)
 
+        st.markdown("### 基于简历匹配到的 RAG 基础知识问题")
+        if st.session_state.rag_items:
+            for item in st.session_state.rag_items:
+                with st.expander(f"{item.get('id')}｜{item.get('category')}｜{item.get('question')}"):
+                    st.write(f"**标签：** {', '.join(item.get('tags', []))}")
+                    st.write(f"**难度：** {item.get('difficulty')}")
+                    st.write(f"**参考答案：** {item.get('answer')}")
+                    st.write(f"**可追问：** {'；'.join(item.get('follow_up', []))}")
+        else:
+            st.info("暂未匹配到 RAG 问题。可以检查简历技术栈或知识库标签。")
+
 with tab2:
+    st.subheader("RAG 知识库检索与检查")
+
+    stats = get_kb_stats()
+    st.markdown("### 知识库统计")
+    st.json(stats)
+
+    search_query = st.text_input(
+        "输入关键词测试检索效果",
+        placeholder="例如：Python MySQL Redis 后端开发 事务 索引"
+    )
+
+    if search_query:
+        results = retrieve_by_query(search_query, top_k=8)
+        st.markdown("### 检索结果")
+        if not results:
+            st.warning("没有检索到相关知识条目。")
+        for item in results:
+            with st.expander(f"Score {item.get('_score', 0)}｜{item.get('id')}｜{item.get('question')}"):
+                st.write(f"**方向：** {item.get('category')}")
+                st.write(f"**标签：** {', '.join(item.get('tags', []))}")
+                st.write(f"**难度：** {item.get('difficulty')}")
+                st.write(f"**参考答案：** {item.get('answer')}")
+                st.write(f"**可追问：** {'；'.join(item.get('follow_up', []))}")
+                st.caption(f"来源：{item.get('source')}")
+
+    st.markdown("### 当前简历推荐问题")
+    if st.session_state.profile:
+        recommended = retrieve_by_profile(st.session_state.profile, top_k=8)
+        for item in recommended:
+            with st.expander(f"{item.get('id')}｜{item.get('category')}｜{item.get('question')}"):
+                st.write(f"**标签：** {', '.join(item.get('tags', []))}")
+                st.write(f"**难度：** {item.get('difficulty')}")
+                st.write(f"**参考答案：** {item.get('answer')}")
+                st.write(f"**可追问：** {'；'.join(item.get('follow_up', []))}")
+    else:
+        st.info("请先在第 1 个页面解析简历，系统会根据简历技术栈推荐 RAG 问题。")
+
+with tab3:
     st.subheader("文字版模拟面试")
 
     if st.session_state.profile:
-        st.info("已检测到用户画像，可以开始面试。")
-        if st.button("开始面试", type="primary"):
-            st.session_state.interview_started = True
-            if not st.session_state.messages:
-                first_question = (
-                    "你好，我是今天的 AI 技术面试官。请你先用 1 分钟做一个简短的自我介绍，"
-                    "重点说明你的技术栈、项目经历以及目标岗位。"
-                )
-                st.session_state.messages.append({"role": "assistant", "content": first_question})
+        st.info("已检测到用户画像，可以开始面试。Day 3 面试流程会自动加入 RAG 基础知识问题。")
+        col_start, col_reset = st.columns([1, 1])
+        with col_start:
+            if st.button("开始面试", type="primary"):
+                st.session_state.interview_started = True
+                if not st.session_state.rag_items:
+                    st.session_state.rag_items = prepare_rag_items_for_interview(st.session_state.profile, top_k=6)
+                if not st.session_state.messages:
+                    first = get_next_question(
+                        profile=st.session_state.profile,
+                        history=st.session_state.messages,
+                        rag_items=st.session_state.rag_items,
+                        rag_index=st.session_state.rag_index
+                    )
+                    st.session_state.messages.append({"role": "assistant", "content": first["question"]})
+                    st.session_state.question_meta.append(first)
+        with col_reset:
+            if st.button("重置面试"):
+                st.session_state.messages = []
+                st.session_state.interview_started = False
+                st.session_state.rag_index = 0
+                st.session_state.question_meta = []
+                st.rerun()
     else:
         st.warning("请先在「简历输入与解析」页面生成用户画像。")
 
@@ -171,28 +250,24 @@ with tab2:
         if user_answer:
             st.session_state.messages.append({"role": "user", "content": user_answer})
 
-            question_count = len([m for m in st.session_state.messages if m["role"] == "assistant"])
-            profile = st.session_state.profile or {}
-            projects = profile.get("project_names", [])
-            skills = profile.get("detected_skills", [])
+            next_info = get_next_question(
+                profile=st.session_state.profile or {},
+                history=st.session_state.messages,
+                rag_items=st.session_state.rag_items,
+                rag_index=st.session_state.rag_index
+            )
 
-            if question_count == 1:
-                project_hint = projects[0] if projects else "你简历中最重要的一个项目"
-                next_question = f"请详细介绍一下「{project_hint}」，包括项目背景、你的职责和使用的核心技术。"
-            elif question_count == 2:
-                next_question = "这个项目中你遇到的最大技术难点是什么？你是如何解决的？"
-            elif question_count == 3:
-                skill_hint = skills[0] if skills else "你熟悉的一项技术"
-                next_question = f"接下来进入基础知识考察。请你解释一下 {skill_hint} 的一个核心概念，并说明它在项目中的应用。"
-            else:
-                next_question = "Day 2 版本暂时到这里。Day 3 将接入更完整的 RAG 知识库检索和基础知识提问。"
-
-            st.session_state.messages.append({"role": "assistant", "content": next_question})
+            st.session_state.rag_index = next_info.get("rag_index", st.session_state.rag_index)
+            st.session_state.messages.append({"role": "assistant", "content": next_info["question"]})
+            st.session_state.question_meta.append(next_info)
             st.rerun()
 
-with tab3:
+    with st.expander("本轮面试问题元数据（用于证明流程与 RAG 关联）", expanded=False):
+        st.json(st.session_state.question_meta)
+
+with tab4:
     st.subheader("面试评分报告")
-    st.info("Day 2 版本暂时展示报告区域。第 5 天会完成自动评分与反馈。")
+    st.info("Day 3 版本暂时展示报告区域。第 5 天会完成自动评分与反馈。")
 
     demo_report = {
         "基础知识掌握程度": "待面试结束后生成",
