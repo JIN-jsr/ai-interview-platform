@@ -1,6 +1,6 @@
 # AI 模拟面试与能力提升平台
 
-本项目是利兹科技月 AI 模拟面试软件开发赛的 Day 3 MVP 版本。
+本项目是利兹科技月 AI 模拟面试软件开发赛的 Day 4 MVP 版本。
 
 ## 当前已完成
 
@@ -25,12 +25,19 @@ Day 2：
 Day 3：
 
 - 扩展 `data/knowledge_base.json` 至 80 条有效知识条目
-- 覆盖 Python、Java、数据结构与算法、数据库与缓存、计算机网络、操作系统、软件工程与 AI 应用等方向
-- 新增 RAG 检索模块 `src/rag_retriever.py`
-- 支持基于关键词的本地知识库检索
+- 新增 RAG 检索模块
 - 支持根据简历用户画像自动推荐基础知识问题
-- 新增 RAG 知识库检查页面
 - 将 RAG 基础知识问题接入模拟面试流程
+
+Day 4：
+
+- 新增 `src/answer_analyzer.py` 回答分析模块
+- 支持记录每一轮问题、用户回答、问题类型、知识点 ID 和参考答案
+- 支持根据用户回答中的技术关键词进行项目追问
+- 支持根据 RAG 回答缺失点进行基础知识追问
+- 新增“面试记录与分析”页面
+- 支持下载面试记录 JSON
+- 页面侧边栏显示面试进度、回答数量和上下文追问次数
 
 ## 技术栈
 
@@ -42,31 +49,6 @@ Day 3：
 - python-docx
 - JSON
 
-## 项目结构
-
-```text
-ai_interview_platform/
-├── app.py
-├── requirements.txt
-├── README.md
-├── .env.example
-├── data/
-│   ├── knowledge_base.json
-│   └── sample_resume.txt
-├── src/
-│   ├── llm_client.py
-│   ├── prompts.py
-│   ├── resume_file_loader.py
-│   ├── resume_parser.py
-│   ├── profile_generator.py
-│   ├── rag_retriever.py
-│   ├── interviewer.py
-│   └── evaluator.py
-└── outputs/
-    ├── logs/
-    └── reports/
-```
-
 ## 本地运行方法
 
 ```bash
@@ -75,68 +57,27 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## RAG 知识库说明
-
-知识库文件位于：
-
-```text
-data/knowledge_base.json
-```
-
-每条知识包含：
-
-- id
-- category
-- tags
-- difficulty
-- question
-- answer
-- follow_up
-- source
-
-当前 Day 3 使用本地关键词检索。检索流程为：
-
-```text
-简历解析结果 / 用户画像
-↓
-提取目标岗位、技能、项目关键词
-↓
-与知识库条目的 category、tags、question、answer 匹配
-↓
-按分数排序并做类别多样化
-↓
-返回相关基础知识问题
-```
-
-## LLM API Key 配置说明
-
-当前版本支持 OpenAI-compatible API 格式。以阿里百炼 DashScope 兼容模式为例：
-
-```text
-LLM_API_KEY=your_api_key_here
-LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-MODEL_NAME=qwen-plus
-USE_LLM=true
-```
-
-如果不配置 API，系统仍然可以运行，会自动使用本地规则解析简历和本地 RAG 检索。
-
-注意：不要把真实 `.env` 文件提交到 GitHub。
-
-## Day 3 测试方式
+## Day 4 测试方式
 
 1. 运行系统；
 2. 在第 1 个页面粘贴或上传简历；
 3. 点击“解析简历并生成画像”；
-4. 查看系统匹配出的 RAG 基础知识问题；
-5. 打开“RAG 知识库”页面，搜索 `Python MySQL Redis 后端`；
-6. 打开“模拟面试”页面，开始面试；
-7. 检查面试中是否出现与知识库相关的基础知识问题。
+4. 打开“模拟面试”页面，点击“开始面试”；
+5. 在项目问题中故意提到 `Redis`、`MySQL`、`缓存`、`API` 等关键词；
+6. 检查系统是否围绕这些关键词继续追问；
+7. 在 RAG 基础题中故意回答得简短一些；
+8. 检查系统是否根据缺失点进行追问；
+9. 打开“面试记录与分析”页面，查看每轮回答分析；
+10. 下载面试记录 JSON。
+
+## 当前说明
+
+Day 4 暂时不依赖 LLM API，主要完成连续面试流程、上下文记忆和可解释回答分析。提交前建议启用 LLM，以增强简历解析、自然追问和最终反馈质量。
 
 ## Git 提交建议
 
 ```bash
 git add .
-git commit -m "Day 3 add RAG knowledge base and retrieval"
+git commit -m "Day 4 add contextual follow-up and answer analysis"
 git push
 ```

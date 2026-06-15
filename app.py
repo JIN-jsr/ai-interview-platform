@@ -3,10 +3,11 @@ from datetime import datetime
 
 import streamlit as st
 
+from src.answer_analyzer import analyze_answer, summarize_interview_records
 from src.interviewer import get_next_question, prepare_rag_items_for_interview
 from src.llm_client import get_llm_config, is_llm_enabled
 from src.profile_generator import generate_profile_from_parsed_resume
-from src.rag_retriever import get_kb_stats, load_knowledge_base, retrieve_by_profile, retrieve_by_query
+from src.rag_retriever import get_kb_stats, retrieve_by_profile, retrieve_by_query
 from src.resume_file_loader import read_uploaded_resume
 from src.resume_parser import parse_resume, simple_resume_summary
 
@@ -17,7 +18,7 @@ st.set_page_config(
 )
 
 st.title("AI 模拟面试与能力提升平台")
-st.caption("Day 3 MVP：扩展 RAG 知识库，支持知识检索，并将 RAG 基础题接入面试流程")
+st.caption("Day 4 MVP：增强连续面试、上下文记忆、回答分析和基于回答的追问")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -35,6 +36,12 @@ if "rag_index" not in st.session_state:
     st.session_state.rag_index = 0
 if "question_meta" not in st.session_state:
     st.session_state.question_meta = []
+if "current_question_meta" not in st.session_state:
+    st.session_state.current_question_meta = None
+if "interview_records" not in st.session_state:
+    st.session_state.interview_records = []
+if "followup_count" not in st.session_state:
+    st.session_state.followup_count = 0
 
 with st.sidebar:
     st.header("设置")
@@ -55,15 +62,27 @@ with st.sidebar:
         st.write(f"Model: {config['model_name']}")
     else:
         st.warning("LLM 未启用，将使用本地规则解析")
-        st.caption("配置 .env 后可启用大模型结构化解析")
+        st.caption("Day 4 暂时不依赖 LLM，提交前再配置即可")
 
     st.divider()
     st.subheader("RAG 知识库")
     kb_stats = get_kb_stats()
     st.write(f"知识条目数：{kb_stats['total_entries']}")
-    st.caption("Day 3 使用本地关键词检索，Day 4/5 可继续增强。")
 
-tab1, tab2, tab3, tab4 = st.tabs(["1. 简历输入与解析", "2. RAG 知识库", "3. 模拟面试", "4. 评分报告"])
+    st.divider()
+    st.subheader("面试进度")
+    assistant_count = len([m for m in st.session_state.messages if m.get("role") == "assistant"])
+    st.write(f"已提出问题：{assistant_count}")
+    st.write(f"已记录回答：{len(st.session_state.interview_records)}")
+    st.write(f"上下文追问次数：{st.session_state.followup_count}")
+
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "1. 简历输入与解析",
+    "2. RAG 知识库",
+    "3. 模拟面试",
+    "4. 面试记录与分析",
+    "5. 评分报告"
+])
 
 with tab1:
     st.subheader("输入或上传简历")
@@ -110,6 +129,9 @@ with tab1:
         st.session_state.rag_items = []
         st.session_state.rag_index = 0
         st.session_state.question_meta = []
+        st.session_state.current_question_meta = None
+        st.session_state.interview_records = []
+        st.session_state.followup_count = 0
         st.rerun()
 
     if parse_btn:
@@ -130,6 +152,11 @@ with tab1:
             st.session_state.profile = profile
             st.session_state.rag_items = rag_items
             st.session_state.rag_index = 0
+            st.session_state.messages = []
+            st.session_state.question_meta = []
+            st.session_state.current_question_meta = None
+            st.session_state.interview_records = []
+            st.session_state.followup_count = 0
             st.success("简历解析完成，并已生成 RAG 推荐问题。")
 
     if save_btn:
@@ -215,7 +242,7 @@ with tab3:
     st.subheader("文字版模拟面试")
 
     if st.session_state.profile:
-        st.info("已检测到用户画像，可以开始面试。Day 3 面试流程会自动加入 RAG 基础知识问题。")
+        st.info("Day 4 面试会记录上下文，并根据用户回答进行追问。")
         col_start, col_reset = st.columns([1, 1])
         with col_start:
             if st.button("开始面试", type="primary"):
@@ -227,9 +254,11 @@ with tab3:
                         profile=st.session_state.profile,
                         history=st.session_state.messages,
                         rag_items=st.session_state.rag_items,
-                        rag_index=st.session_state.rag_index
+                        rag_index=st.session_state.rag_index,
+                        followup_count=st.session_state.followup_count
                     )
                     st.session_state.messages.append({"role": "assistant", "content": first["question"]})
+                    st.session_state.current_question_meta = first
                     st.session_state.question_meta.append(first)
         with col_reset:
             if st.button("重置面试"):
@@ -237,6 +266,9 @@ with tab3:
                 st.session_state.interview_started = False
                 st.session_state.rag_index = 0
                 st.session_state.question_meta = []
+                st.session_state.current_question_meta = None
+                st.session_state.interview_records = []
+                st.session_state.followup_count = 0
                 st.rerun()
     else:
         st.warning("请先在「简历输入与解析」页面生成用户画像。")
@@ -250,30 +282,91 @@ with tab3:
         if user_answer:
             st.session_state.messages.append({"role": "user", "content": user_answer})
 
+            last_meta = st.session_state.current_question_meta or {}
+            analysis = analyze_answer(last_meta, user_answer)
+
+            st.session_state.interview_records.append({
+                "question": last_meta.get("question", ""),
+                "question_type": last_meta.get("type", "unknown"),
+                "knowledge_id": last_meta.get("knowledge_id", ""),
+                "reference_answer": last_meta.get("reference_answer", ""),
+                "user_answer": user_answer,
+                "analysis": analysis,
+                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            })
+
             next_info = get_next_question(
                 profile=st.session_state.profile or {},
                 history=st.session_state.messages,
                 rag_items=st.session_state.rag_items,
-                rag_index=st.session_state.rag_index
+                rag_index=st.session_state.rag_index,
+                last_answer=user_answer,
+                last_question_meta=last_meta,
+                last_analysis=analysis,
+                followup_count=st.session_state.followup_count
             )
 
             st.session_state.rag_index = next_info.get("rag_index", st.session_state.rag_index)
+            st.session_state.followup_count = next_info.get("followup_count", st.session_state.followup_count)
             st.session_state.messages.append({"role": "assistant", "content": next_info["question"]})
+            st.session_state.current_question_meta = next_info
             st.session_state.question_meta.append(next_info)
             st.rerun()
 
-    with st.expander("本轮面试问题元数据（用于证明流程与 RAG 关联）", expanded=False):
+    with st.expander("本轮面试问题元数据（用于证明流程、RAG 与上下文追问）", expanded=False):
         st.json(st.session_state.question_meta)
 
 with tab4:
-    st.subheader("面试评分报告")
-    st.info("Day 3 版本暂时展示报告区域。第 5 天会完成自动评分与反馈。")
+    st.subheader("面试记录与回答分析")
 
+    records = st.session_state.interview_records
+    summary = summarize_interview_records(records)
+
+    st.markdown("### 面试过程摘要")
+    st.json(summary)
+
+    if not records:
+        st.info("还没有面试回答记录。请先开始模拟面试。")
+    else:
+        for idx, record in enumerate(records, start=1):
+            title = f"第 {idx} 题｜{record.get('question_type')}｜临时评分 {record.get('analysis', {}).get('overall_temp_score')}/10"
+            if record.get("knowledge_id"):
+                title += f"｜{record.get('knowledge_id')}"
+            with st.expander(title, expanded=False):
+                st.markdown("**问题：**")
+                st.write(record.get("question", ""))
+                st.markdown("**用户回答：**")
+                st.write(record.get("user_answer", ""))
+                st.markdown("**回答分析：**")
+                st.json(record.get("analysis", {}))
+                if record.get("reference_answer"):
+                    st.markdown("**参考答案 / 依据：**")
+                    st.write(record.get("reference_answer"))
+
+        json_text = json.dumps(records, ensure_ascii=False, indent=2)
+        st.download_button(
+            "下载本轮面试记录 JSON",
+            data=json_text,
+            file_name=f"interview_records_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+            mime="application/json"
+        )
+
+with tab5:
+    st.subheader("面试评分报告")
+    st.info("Day 4 版本提供过程分析和临时评分。Day 5 会完成正式五维度评分报告。")
+
+    summary = summarize_interview_records(st.session_state.interview_records)
     demo_report = {
-        "基础知识掌握程度": "待面试结束后生成",
-        "项目理解深度": "待面试结束后生成",
-        "回答逻辑性": "待面试结束后生成",
-        "表达完整性": "待面试结束后生成",
-        "岗位匹配度": "待面试结束后生成"
+        "当前回答数量": summary["total_answers"],
+        "临时平均分": summary["average_temp_score"],
+        "高频技术关键词": summary["frequent_keywords"],
+        "常见问题": summary["common_problems"],
+        "正式评分维度": {
+            "基础知识掌握程度": "Day 5 生成",
+            "项目理解深度": "Day 5 生成",
+            "回答逻辑性": "Day 5 生成",
+            "表达完整性": "Day 5 生成",
+            "岗位匹配度": "Day 5 生成"
+        }
     }
     st.json(demo_report)
