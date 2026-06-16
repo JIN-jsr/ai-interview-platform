@@ -1,4 +1,5 @@
 from datetime import datetime
+import re
 from typing import Any, Dict, List, Tuple
 
 
@@ -14,6 +15,28 @@ WEIGHTS = {
 BASIC_TYPES = {"rag_basic", "rag_followup", "basic"}
 PROJECT_TYPES = {"project", "project_followup"}
 
+ROLE_SKILL_KEYWORDS = {
+    "后端": [
+        "Python", "Java", "Go", "Gin", "Flask", "FastAPI", "Spring Boot",
+        "MySQL", "PostgreSQL", "Redis", "RabbitMQ", "Kafka", "RESTful API",
+        "接口设计", "微服务", "高并发", "分布式锁", "幂等性", "限流", "熔断",
+        "降级", "监控告警", "异步任务", "消息队列", "本地消息表", "Lua", "Lua 脚本",
+        "布隆过滤器", "数据库事务", "索引优化", "缓存一致性", "部署", "Docker", "Kubernetes"
+    ],
+    "AI": [
+        "LLM", "大语言模型", "大模型 API", "大模型API", "RAG", "Embedding",
+        "向量数据库", "Chroma", "Milvus", "FAISS", "LangChain", "Prompt Engineering",
+        "Function Calling", "Agent", "Rerank", "Token", "Token 管理", "上下文管理",
+        "上下文压缩", "结构化输出", "模型评估", "AI 工程化", "Streamlit", "FastAPI",
+        "模型调用", "检索增强生成"
+    ],
+    "前端": [
+        "HTML", "CSS", "JavaScript", "TypeScript", "Vue", "React", "Element Plus",
+        "前端工程化", "组件化", "状态管理", "响应式布局"
+    ],
+    "数据": ["SQL", "数据", "分析", "指标", "可视化", "统计", "报表"]
+}
+
 
 def clamp(value: float, low: float = 0, high: float = 100) -> float:
     return max(low, min(high, value))
@@ -28,6 +51,34 @@ def avg(values: List[float], default: float = 0) -> float:
 
 def get_records_by_type(records: List[Dict[str, Any]], types: set) -> List[Dict[str, Any]]:
     return [r for r in records if r.get("question_type") in types]
+
+
+def normalize_match_text(text: str) -> str:
+    return str(text or "").lower().replace(" ", "").replace("_", "").replace("-", "")
+
+
+def term_in_text(term: str, text: str) -> bool:
+    normalized_term = str(term or "").lower().strip()
+    normalized_text = str(text or "").lower()
+    if not normalized_term:
+        return False
+    if re.search(r"[\u4e00-\u9fff]", normalized_term):
+        return normalize_match_text(term) in normalize_match_text(text)
+    if re.fullmatch(r"[a-z0-9+#.]+", normalized_term):
+        return re.search(rf"(?<![a-z0-9+#.]){re.escape(normalized_term)}(?![a-z0-9+#.])", normalized_text) is not None
+    return normalize_match_text(term) in normalize_match_text(text)
+
+
+def get_role_keywords(target_role: str) -> List[str]:
+    if "后端" in target_role:
+        return ROLE_SKILL_KEYWORDS["后端"]
+    if "AI" in target_role or "人工智能" in target_role:
+        return ROLE_SKILL_KEYWORDS["AI"]
+    if "前端" in target_role:
+        return ROLE_SKILL_KEYWORDS["前端"]
+    if "数据" in target_role:
+        return ROLE_SKILL_KEYWORDS["数据"]
+    return []
 
 
 def score_basic_knowledge(records: List[Dict[str, Any]]) -> Tuple[float, List[str]]:
@@ -142,32 +193,28 @@ def score_job_match(records: List[Dict[str, Any]], profile: Dict[str, Any]) -> T
     skills = set(str(s) for s in profile.get("detected_skills", []) if str(s).strip())
 
     answer_text = "\n".join(r.get("user_answer", "") for r in records)
-    mentioned_skills = [skill for skill in skills if skill and skill in answer_text]
+    mentioned_skills = [skill for skill in skills if skill and term_in_text(skill, answer_text)]
+    role_keywords = get_role_keywords(target_role)
+    matched_role_keywords = [kw for kw in role_keywords if term_in_text(kw, answer_text)]
 
     base = 60
     if skills:
         base += min(25, len(mentioned_skills) / max(1, len(skills)) * 25)
 
-    role_bonus = 0
-    if "后端" in target_role and any(k in answer_text for k in ["接口", "数据库", "MySQL", "Redis", "后端", "API"]):
-        role_bonus += 10
-    if "前端" in target_role and any(k in answer_text for k in ["页面", "前端", "React", "Vue", "JavaScript"]):
-        role_bonus += 10
-    if ("AI" in target_role or "人工智能" in target_role) and any(k in answer_text for k in ["模型", "机器学习", "深度学习", "RAG", "大语言模型"]):
-        role_bonus += 10
-    if "数据" in target_role and any(k in answer_text for k in ["数据", "SQL", "分析", "指标"]):
-        role_bonus += 10
+    role_bonus = min(15, len(matched_role_keywords) * 2.5)
 
     score = clamp(base + role_bonus)
 
     evidence = [
         f"目标岗位：{target_role or '未明确'}。",
-        f"简历识别技能数：{len(skills)}；回答中主动提到的技能数：{len(mentioned_skills)}。"
+        f"简历识别技能数：{len(skills)}；回答中主动提到的简历技能数：{len(mentioned_skills)}。"
     ]
     if mentioned_skills:
         evidence.append(f"回答中体现的相关技能：{'、'.join(mentioned_skills[:8])}。")
+    if matched_role_keywords:
+        evidence.append(f"回答中体现的岗位关键词：{'、'.join(matched_role_keywords[:10])}。")
     else:
-        evidence.append("回答中对简历技能的主动关联较少，岗位匹配度展示不足。")
+        evidence.append("回答中对目标岗位关键词的主动关联较少，岗位匹配度展示不足。")
 
     return round(score, 1), evidence
 
@@ -203,9 +250,9 @@ def collect_recommendations(records: List[Dict[str, Any]], profile: Dict[str, An
 
     target_role = profile.get("target_role", "")
     if "后端" in target_role:
-        recommendations.append("后端方向建议重点复习：数据库事务与索引、Redis 缓存一致性、接口设计、异常处理和部署。")
+        recommendations.append("后端方向建议重点复习：接口设计、数据库事务与索引、Redis 缓存一致性、消息队列、幂等性、限流降级和部署。")
     elif "AI" in target_role or "人工智能" in target_role:
-        recommendations.append("AI 应用方向建议重点补充：模型选择、训练流程、评价指标、RAG 检索流程和工程落地。")
+        recommendations.append("AI 应用方向建议重点补充：LLM API 调用、RAG 检索流程、Embedding、向量数据库、Prompt Engineering、结构化输出和工程落地。")
     elif "前端" in target_role:
         recommendations.append("前端方向建议重点补充：组件化、状态管理、接口联调、浏览器机制和页面性能优化。")
     else:

@@ -1,4 +1,5 @@
 from io import BytesIO
+from typing import List, Tuple
 
 
 def read_uploaded_resume(uploaded_file) -> str:
@@ -36,3 +37,29 @@ def read_uploaded_resume(uploaded_file) -> str:
         return "\n".join(paragraphs).strip()
 
     raise ValueError("Unsupported file type. Please upload a .txt, .pdf, or .docx resume.")
+
+
+def load_resume_files(uploaded_files) -> Tuple[str, List[str], List[str]]:
+    """Read multiple uploaded resume files and combine them with clear separators."""
+    if not uploaded_files:
+        return "", [], []
+
+    text_parts = []
+    file_names = []
+    warnings = []
+
+    for idx, uploaded_file in enumerate(uploaded_files, start=1):
+        if uploaded_file is None:
+            continue
+        file_name = getattr(uploaded_file, "name", f"file_{idx}")
+        file_names.append(file_name)
+        try:
+            text = read_uploaded_resume(uploaded_file)
+            if text.strip():
+                text_parts.append(f"===== 文件 {idx}: {file_name} =====\n{text.strip()}")
+            else:
+                warnings.append(f"{file_name}: 没有读取到有效文本")
+        except Exception as exc:
+            warnings.append(f"{file_name}: {exc}")
+
+    return "\n\n".join(text_parts).strip(), file_names, warnings

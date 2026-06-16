@@ -4,5 +4,6 @@ __pycache__/
 *.pyc
 outputs/logs/*
 outputs/reports/*
+outputs/sessions/*
 !outputs/logs/.gitkeep
 !outputs/reports/.gitkeep

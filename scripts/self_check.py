@@ -18,7 +18,13 @@ REQUIRED_FILES = [
     ".env.example",
     "data/knowledge_base.json",
     "data/sample_resume.txt",
+    "demo/sample_resume_ai_app.txt",
+    "demo/sample_resume_backend.txt",
+    "demo/sample_answers_ai_app.md",
+    "demo/demo_walkthrough.md",
+    "docs/final_submission_checklist.md",
     "src/llm_client.py",
+    "src/llm_interviewer.py",
     "src/resume_parser.py",
     "src/resume_file_loader.py",
     "src/profile_generator.py",
@@ -26,11 +32,13 @@ REQUIRED_FILES = [
     "src/interviewer.py",
     "src/answer_analyzer.py",
     "src/evaluator.py",
+    "src/session_manager.py",
 ]
 
 PYTHON_FILES = [
     "app.py",
     "src/llm_client.py",
+    "src/llm_interviewer.py",
     "src/resume_parser.py",
     "src/resume_file_loader.py",
     "src/profile_generator.py",
@@ -38,6 +46,7 @@ PYTHON_FILES = [
     "src/interviewer.py",
     "src/answer_analyzer.py",
     "src/evaluator.py",
+    "src/session_manager.py",
 ]
 
 
@@ -64,7 +73,20 @@ def check_knowledge_base():
     data = json.loads(kb_path.read_text(encoding="utf-8"))
     categories = sorted(set(item.get("category", "") for item in data))
     invalid = []
-    required = {"id", "category", "tags", "difficulty", "question", "answer", "follow_up", "source"}
+    required = {
+        "id",
+        "category",
+        "tags",
+        "difficulty",
+        "question_type",
+        "question",
+        "answer",
+        "expected_points",
+        "bad_answer_signals",
+        "follow_up",
+        "related_project_scenarios",
+        "source",
+    }
     for item in data:
         missing = required - set(item.keys())
         if missing:

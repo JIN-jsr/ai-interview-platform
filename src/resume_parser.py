@@ -11,6 +11,9 @@ COMMON_SKILLS = [
     "Flask", "Django", "FastAPI", "Spring Boot",
     "MySQL", "PostgreSQL", "SQLite", "Redis", "MongoDB",
     "Git", "Docker", "Linux", "RESTful API",
+    "RAG", "LLM", "大模型API", "Prompt Engineering", "Embedding",
+    "向量数据库", "Chroma", "LangChain", "Function Calling", "Agent",
+    "Rerank", "Token 管理",
     "机器学习", "深度学习", "PyTorch", "TensorFlow", "NLP",
     "数据结构", "算法", "计算机网络", "操作系统"
 ]
@@ -32,7 +35,12 @@ def guess_target_roles(skills: List[str]) -> List[str]:
         roles.append("后端开发")
     if any(s in skills for s in ["React", "Vue", "JavaScript", "TypeScript", "HTML", "CSS"]):
         roles.append("前端开发")
-    if any(s in skills for s in ["机器学习", "深度学习", "PyTorch", "TensorFlow", "NLP"]):
+    if any(s in skills for s in [
+        "机器学习", "深度学习", "PyTorch", "TensorFlow", "NLP",
+        "RAG", "LLM", "大模型API", "Prompt Engineering", "Embedding",
+        "向量数据库", "Chroma", "LangChain", "Function Calling", "Agent",
+        "Rerank", "Token 管理"
+    ]):
         roles.append("AI应用开发")
     if any(s in skills for s in ["Python", "MySQL"]) and "AI应用开发" not in roles:
         roles.append("数据分析")
@@ -86,7 +94,12 @@ def heuristic_resume_parse(text: str) -> Dict[str, Any]:
             "frameworks": [s for s in skills if s in ["Flask", "Django", "FastAPI", "Spring Boot", "React", "Vue", "Node.js"]],
             "databases": [s for s in skills if s in ["MySQL", "PostgreSQL", "SQLite", "Redis", "MongoDB"]],
             "tools": [s for s in skills if s in ["Git", "Docker", "Linux"]],
-            "ai_ml": [s for s in skills if s in ["机器学习", "深度学习", "PyTorch", "TensorFlow", "NLP"]],
+            "ai_ml": [s for s in skills if s in [
+                "机器学习", "深度学习", "PyTorch", "TensorFlow", "NLP",
+                "RAG", "LLM", "大模型API", "Prompt Engineering", "Embedding",
+                "向量数据库", "Chroma", "LangChain", "Function Calling", "Agent",
+                "Rerank", "Token 管理"
+            ]],
             "others": [s for s in skills if s in ["数据结构", "算法", "计算机网络", "操作系统", "RESTful API"]]
         },
         "projects": [
@@ -119,7 +132,7 @@ def parse_resume_with_llm(text: str) -> Dict[str, Any]:
         {"role": "system", "content": RESUME_PARSE_SYSTEM_PROMPT},
         {"role": "user", "content": RESUME_PARSE_USER_PROMPT.replace("{resume_text}", text[:12000])}
     ]
-    content = call_chat(messages=messages, temperature=0.1)
+    content = call_chat(messages=messages, temperature=0.1, timeout=120)
     return extract_json_from_text(content)
 
 
