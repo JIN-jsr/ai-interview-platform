@@ -217,7 +217,7 @@ def generate_learning_recommendations(
 
 def analyze_growth_reports(reports: List[Dict[str, Any]]) -> Dict[str, Any]:
     if len(reports) < 2:
-        return {"summary": "请至少选择两条已生成报告的面试记录。", "recommendations": []}
+        return {"summary": "请至少选择两条已生成报告的面试记录。", "dimension_analysis": [], "recommendations": []}
 
     sorted_reports = sorted(reports, key=lambda item: item.get("generated_at", ""))
     first = float(sorted_reports[0].get("total_score", 0) or 0)
@@ -235,6 +235,17 @@ def analyze_growth_reports(reports: List[Dict[str, Any]]) -> Dict[str, Any]:
     for dim, value in last_dims.items():
         improvements[dim] = float(value or 0) - float(first_dims.get(dim, value) or 0)
     fastest = max(improvements.items(), key=lambda item: item[1])[0] if improvements else ""
+    volatile_dim = ""
+    volatility = {}
+    all_dims = set()
+    for report in sorted_reports:
+        all_dims.update((report.get("dimension_scores") or {}).keys())
+    for dim in all_dims:
+        values = [float((report.get("dimension_scores") or {}).get(dim, 0) or 0) for report in sorted_reports]
+        if values:
+            volatility[dim] = max(values) - min(values)
+    if volatility:
+        volatile_dim = max(volatility.items(), key=lambda item: item[1])[0]
 
     direction = "提升" if delta >= 0 else "下降"
     summary = (
@@ -246,7 +257,22 @@ def analyze_growth_reports(reports: List[Dict[str, Any]]) -> Dict[str, Any]:
     if lowest_dim:
         recommendations.append(DIMENSION_RECOMMENDATIONS.get(lowest_dim, "建议继续围绕目标岗位进行专项练习。"))
     recommendations.append("建议只选择真实有效的完整面试记录进行趋势分析，避免测试会话影响判断。")
-    return {"summary": summary, "recommendations": recommendations}
+    dimension_analysis = []
+    if fastest:
+        dimension_analysis.append(f"提升最快的维度是 {fastest}，说明这一项近期训练已有正向变化。")
+    if lowest_dim:
+        dimension_analysis.append(f"当前相对薄弱的维度是 {lowest_dim}，建议后续优先安排专项复盘。")
+    if volatile_dim:
+        dimension_analysis.append(f"波动较大的维度是 {volatile_dim}，建议保持稳定练习节奏，避免单次表现影响判断。")
+    return {
+        "summary": summary,
+        "dimension_analysis": dimension_analysis,
+        "recommendations": recommendations,
+        "weakest_dimension": lowest_dim,
+        "fastest_improving_dimension": fastest,
+        "most_volatile_dimension": volatile_dim,
+        "source": "rule_based",
+    }
 
 
 def format_report_time(value: str) -> str:

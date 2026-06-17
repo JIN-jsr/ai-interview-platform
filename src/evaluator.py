@@ -2,6 +2,7 @@ from datetime import datetime
 import re
 from typing import Any, Dict, List, Tuple
 
+from src.llm_feedback_polisher import polish_final_report_text_with_llm
 from src.product_features import generate_learning_recommendations, summarize_weak_points
 
 
@@ -303,7 +304,10 @@ def build_final_report(records: List[Dict[str, Any]], profile: Dict[str, Any]) -
         detected_skills=profile.get("detected_skills", [])
     )
     role_mismatch_warning = profile.get("role_mismatch_warning", "")
+    role_mismatch_detail = profile.get("role_mismatch_detail", {})
     resume_optimization_suggestions = profile.get("resume_optimization_suggestions", [])
+    is_incomplete_interview = bool(profile.get("is_incomplete_interview", False))
+    incomplete_report_warning = profile.get("incomplete_report_warning", "")
 
     report = {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -313,6 +317,8 @@ def build_final_report(records: List[Dict[str, Any]], profile: Dict[str, Any]) -
         "level": level_from_score(weighted_total),
         "weights": WEIGHTS,
         "dimension_scores": dimension_scores,
+        "is_incomplete_interview": is_incomplete_interview,
+        "incomplete_report_warning": incomplete_report_warning if is_incomplete_interview else "",
         "dimension_details": {
             "基础知识掌握程度": {
                 "score": basic_score,
@@ -344,6 +350,7 @@ def build_final_report(records: List[Dict[str, Any]], profile: Dict[str, Any]) -
         "main_problems": collect_common_problems(records) or ["暂无明显高频问题，但建议继续增加回答细节和技术深度。"],
         "recommendations": collect_recommendations(records, profile),
         "role_mismatch_warning": role_mismatch_warning,
+        "role_mismatch_detail": role_mismatch_detail,
         "resume_optimization_suggestions": resume_optimization_suggestions,
         "weak_points_summary": weak_points_summary,
         "learning_recommendations": learning_recommendations,
@@ -354,7 +361,7 @@ def build_final_report(records: List[Dict[str, Any]], profile: Dict[str, Any]) -
             "knowledge_ids": [r.get("knowledge_id") for r in records if r.get("knowledge_id")]
         }
     }
-    return report
+    return polish_final_report_text_with_llm(report, profile)
 
 
 def report_to_markdown(report: Dict[str, Any]) -> str:
@@ -366,6 +373,9 @@ def report_to_markdown(report: Dict[str, Any]) -> str:
     lines.append(f"总分：**{report.get('total_score')} / 100**")
     lines.append(f"等级：**{report.get('level')}**")
     lines.append("")
+    if report.get("is_incomplete_interview"):
+        lines.append("> " + (report.get("incomplete_report_warning") or "本次面试尚未完整完成，当前评分报告仅供阶段性参考。"))
+        lines.append("")
     lines.append("## 五维度评分")
     lines.append("")
     lines.append("| 维度 | 权重 | 分数 |")
