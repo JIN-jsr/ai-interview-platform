@@ -1,4 +1,5 @@
 import json
+import math
 from datetime import datetime
 import streamlit.components.v1 as components
 
@@ -30,15 +31,161 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("AI 模拟面试与能力提升平台")
-st.caption("简历驱动 + RAG 知识库 + LLM 连续追问 + 五维度评分反馈")
-st.markdown(
-    """
-    面向计算机相关专业学生的 AI 模拟技术面试训练平台。系统根据简历生成候选人画像，
-    结合本地 RAG 知识库和可选 LLM 生成面试问题，记录回答过程并输出可下载的评分报告。
-    """
-)
-st.code("简历输入 -> 用户画像 -> RAG 检索 -> 连续面试 -> 回答分析 -> 评分报告", language="text")
+USE_REFINED_UI = True
+
+
+def inject_refined_bw_styles():
+    st.markdown(
+        """
+        <style>
+        :root {
+            --ui-black: #111827;
+            --ui-text: #1f2937;
+            --ui-muted: #6b7280;
+            --ui-border: #e5e7eb;
+            --ui-border-strong: #d1d5db;
+            --ui-soft: #f9fafb;
+            --ui-white: #ffffff;
+            --ui-shadow: 0 8px 28px rgba(15, 23, 42, 0.05);
+        }
+        h1, h2, h3 {
+            letter-spacing: 0;
+        }
+        .stButton > button {
+            min-height: 52px;
+            border-radius: 15px;
+            border: 1px solid var(--ui-border-strong);
+            background: var(--ui-white);
+            color: var(--ui-black);
+            font-size: 17px;
+            font-weight: 650;
+            box-shadow: none;
+        }
+        .stButton > button:hover {
+            border-color: var(--ui-black);
+            color: var(--ui-black);
+            background: var(--ui-soft);
+        }
+        .stButton > button[kind="primary"],
+        .stButton > button[data-testid="baseButton-primary"] {
+            background: var(--ui-black);
+            color: var(--ui-white);
+            border-color: var(--ui-black);
+        }
+        .stButton > button[kind="primary"]:hover,
+        .stButton > button[data-testid="baseButton-primary"]:hover {
+            background: #1f2937;
+            color: var(--ui-white);
+            border-color: #1f2937;
+        }
+        .home-hero {
+            min-height: auto !important;
+            padding-top: 28vh !important;
+            margin-bottom: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: center !important;
+            text-align: center !important;
+        }
+        .home-title {
+            font-size: clamp(52px, 5.5vw, 78px) !important;
+            font-weight: 850 !important;
+            letter-spacing: -0.045em !important;
+            line-height: 1.08 !important;
+            color: var(--ui-black) !important;
+            margin: 0 0 18px !important;
+            white-space: nowrap !important;
+        }
+        .home-subtitle {
+            font-size: clamp(22px, 2vw, 30px) !important;
+            font-weight: 400 !important;
+            color: var(--ui-muted) !important;
+            line-height: 1.6 !important;
+            margin: 0 auto 20px !important;
+            max-width: 980px !important;
+        }
+        .home-actions {
+            height: 0;
+            margin: 0;
+            padding: 0;
+        }
+        .home-actions + div[data-testid="stHorizontalBlock"] {
+            max-width: 600px !important;
+            margin: 0 auto !important;
+        }
+        .home-actions + div[data-testid="stHorizontalBlock"] .stButton > button {
+            min-height: 56px !important;
+            min-width: 220px !important;
+            font-size: 20px !important;
+            font-weight: 650 !important;
+            border-radius: 16px !important;
+        }
+        .intro-lead {
+            color: var(--ui-muted);
+            font-size: 18px;
+            line-height: 1.7;
+            max-width: 960px;
+            margin: 0 0 1.5rem;
+        }
+        .intro-card {
+            background: var(--ui-white);
+            border: 1px solid var(--ui-border);
+            border-radius: 18px;
+            padding: 24px;
+            box-shadow: var(--ui-shadow);
+            height: 100%;
+            margin-bottom: 1rem;
+        }
+        .intro-card h3 {
+            color: var(--ui-black);
+            font-size: 22px;
+            font-weight: 750;
+            margin: 0 0 14px;
+        }
+        .intro-card p,
+        .intro-card li {
+            color: #374151;
+            font-size: 16px;
+            line-height: 1.75;
+        }
+        .intro-card ul {
+            margin: 0;
+            padding-left: 1.2rem;
+        }
+        .process-flow {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 14px;
+            align-items: center;
+            margin-top: 6px;
+            border: 1px solid var(--ui-border);
+            border-radius: 14px;
+            background: var(--ui-soft);
+            padding: 18px 20px;
+            color: var(--ui-black);
+            font-weight: 650;
+            line-height: 1.7;
+        }
+        .process-step {
+            white-space: nowrap;
+        }
+        @media (max-width: 900px) {
+            .home-hero {
+                padding-top: 22vh !important;
+            }
+            .home-title {
+                white-space: normal !important;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+if USE_REFINED_UI:
+    inject_refined_bw_styles()
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -108,6 +255,8 @@ if "pending_load_session_id" not in st.session_state:
     st.session_state.pending_load_session_id = None
 if "pending_delete_session_id" not in st.session_state:
     st.session_state.pending_delete_session_id = None
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "home"
 
 
 DEMO_DIR = Path("demo")
@@ -115,6 +264,18 @@ SAMPLE_RESUMES = {
     "AI 应用开发示例": DEMO_DIR / "sample_resume_ai_app.txt",
     "后端开发示例": DEMO_DIR / "sample_resume_backend.txt",
 }
+
+STATUS_LABELS = {
+    "created": "已创建",
+    "resume_ready": "简历已解析",
+    "interviewing": "面试进行中",
+    "completed": "报告已生成",
+    "in_progress": "面试进行中",
+}
+
+
+def get_status_label(status):
+    return STATUS_LABELS.get(str(status or "").strip(), "已创建")
 
 
 def reset_interview_state():
@@ -241,6 +402,457 @@ def create_blank_current_session(target_role=None, difficulty=None):
     )
     reset_all_state()
     restore_session_state(new_session)
+
+def go_to_page(page):
+    st.session_state.current_page = page
+    st.rerun()
+
+
+def render_home_page():
+    if not USE_REFINED_UI:
+        st.markdown(
+            """
+            <style>
+            [data-testid="stSidebar"] {display: none;}
+            [data-testid="collapsedControl"] {display: none;}
+            .block-container {max-width: 1180px; padding-top: 0;}
+            .home-hero {
+                min-height: 58vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+            }
+            .home-title {
+                font-size: clamp(56px, 7vw, 80px);
+                font-weight: 900;
+                line-height: 1.08;
+                color: #101828;
+                margin: 0 0 28px 0;
+                letter-spacing: 0;
+            }
+            .home-subtitle {
+                font-size: clamp(22px, 2.4vw, 28px);
+                line-height: 1.55;
+                color: #667085;
+                margin: 0 0 52px 0;
+                max-width: 920px;
+            }
+            div[data-testid="stHorizontalBlock"]:has(.home-button-spacer) {
+                max-width: 720px;
+                margin: 0 auto;
+            }
+            .stButton > button {
+                min-height: 64px;
+                min-width: 220px;
+                font-size: 22px;
+                font-weight: 700;
+                border-radius: 18px;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            """
+            <style>
+            [data-testid="stSidebar"] {display: none;}
+            [data-testid="collapsedControl"] {display: none;}
+            .block-container {max-width: 1180px; padding-top: 0;}
+            .stButton > button {
+                min-height: 56px !important;
+                min-width: 220px !important;
+                font-size: 20px !important;
+                font-weight: 650 !important;
+                border-radius: 16px !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+    st.markdown(
+        """
+        <div class="home-hero">
+          <h1 class="home-title">AI模拟面试与能力提升平台</h1>
+          <p class="home-subtitle">
+            简历驱动、RAG 知识库、LLM 连续追问与五维度评分报告的一体化训练工具
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown('<span class="home-actions"></span>', unsafe_allow_html=True)
+    col_left, col_intro, col_gap, col_interview, col_right = st.columns([1, 1.45, 0.36, 1.45, 1])
+    with col_intro:
+        if st.button("系统介绍", type="secondary", use_container_width=True):
+            go_to_page("intro")
+    with col_interview:
+        if st.button("模拟面试", type="primary", use_container_width=True):
+            go_to_page("interview")
+
+
+def render_intro_page():
+    st.markdown(
+        """
+        <style>
+        [data-testid="stSidebar"] {display: none;}
+        [data-testid="collapsedControl"] {display: none;}
+        .block-container {max-width: 1080px; padding-top: 3rem;}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    nav_home, nav_interview, nav_space = st.columns([1, 1, 4])
+    with nav_home:
+        if st.button("返回主页", use_container_width=True):
+            go_to_page("home")
+    with nav_interview:
+        if st.button("进入模拟面试", type="primary", use_container_width=True):
+            go_to_page("interview")
+
+    st.title("系统介绍")
+    if not USE_REFINED_UI:
+        st.write(
+            "本系统面向计算机相关专业学生和求职者，围绕简历内容生成候选人画像，"
+            "结合本地知识库与可选大模型能力，完成从模拟面试到评分反馈的闭环训练。"
+        )
+        st.code("简历输入 -> 用户画像 -> RAG 检索 -> LLM 连续追问 -> 回答分析 -> 五维度评分报告", language="text")
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown("### 核心能力")
+            st.write("- 简历解析与多文件材料合并")
+            st.write("- 岗位画像和面试重点生成")
+            st.write("- RAG 知识库检索与岗位导向选题")
+            st.write("- LLM 动态出题与上下文连续追问")
+            st.write("- 回答覆盖度分析和评分报告")
+        with col_b:
+            st.markdown("### 技术特点")
+            st.write("- LLM + RAG 协同，问题基于知识库和候选人画像")
+            st.write("- 规则备用机制，接口不可用时仍可完成面试")
+            st.write("- 难度控制、岗位导向和问题元数据可解释")
+            st.write("- 本地 JSON 面试历史，支持独立会话恢复")
+            st.write("- 五维度评分：基础、项目、逻辑、表达、岗位匹配")
+        st.markdown("### 适合用户")
+        st.write("适合准备技术面试、课程展示、竞赛演示或希望系统化复盘项目表达的学生与求职者。")
+        st.markdown("### 评分报告说明")
+        st.write("评分报告从基础知识、项目理解、回答逻辑、表达完整性和岗位匹配五个维度给出结构化反馈，便于后续针对性提升。")
+        return
+
+    st.markdown(
+        """
+        <p class="intro-lead">
+        本系统面向计算机相关专业学生与求职者，围绕简历内容生成候选人画像，
+        结合本地知识库与大模型能力，完成从模拟面试到评分反馈的闭环训练。
+        </p>
+        <div class="intro-card">
+          <h3>训练流程</h3>
+          <div class="process-flow">
+            <span class="process-step">简历输入</span>
+            <span>→</span>
+            <span class="process-step">用户画像</span>
+            <span>→</span>
+            <span class="process-step">RAG 检索</span>
+            <span>→</span>
+            <span class="process-step">LLM 生成追问</span>
+            <span>→</span>
+            <span class="process-step">回答分析</span>
+            <span>→</span>
+            <span class="process-step">五维度评分报告</span>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.markdown(
+            """
+            <div class="intro-card">
+              <h3>核心能力</h3>
+              <ul>
+                <li>简历解析与多文件材料合并</li>
+                <li>岗位画像和面试画像生成</li>
+                <li>RAG 知识库检索与岗位导向选题</li>
+                <li>LLM 动态出题与上下文连续追问</li>
+                <li>回答覆盖度分析和评分报告</li>
+              </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with col_b:
+        st.markdown(
+            """
+            <div class="intro-card">
+              <h3>技术特点</h3>
+              <ul>
+                <li>LLM + RAG 协同，问题基于知识库和候选人画像</li>
+                <li>策略降级机制，接口不可用时仍可完成面试</li>
+                <li>难度控制、岗位导向和问题元数据可解释</li>
+                <li>本地 JSON 面试历史，支持独立会话恢复</li>
+                <li>五维度评分：基础、项目、逻辑、表达、岗位匹配</li>
+              </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    col_c, col_d = st.columns(2)
+    with col_c:
+        st.markdown(
+            """
+            <div class="intro-card">
+              <h3>适合用户</h3>
+              <p>适合准备技术面试、课程展示、竞赛演示或希望系统化复盘项目表达的学生与求职者。</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with col_d:
+        st.markdown(
+            """
+            <div class="intro-card">
+              <h3>评分报告说明</h3>
+              <p>评分报告从基础知识、项目理解、回答逻辑、表达完整性和岗位匹配五个维度给出结构化反馈，便于后续针对性提升。</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+def render_realtime_status(target_role, difficulty, current_status, assistant_count, kb_stats):
+    with st.expander("实时面试状态", expanded=False):
+        info_cols = st.columns(5)
+        info_cols[0].metric("当前岗位", target_role)
+        info_cols[1].metric("面试难度", difficulty)
+        info_cols[2].metric("当前状态", current_status)
+        info_cols[3].metric("已回答题数", len(st.session_state.interview_records))
+        info_cols[4].metric("报告状态", "已生成" if st.session_state.final_report else "未生成")
+        detail_cols = st.columns(4)
+        detail_cols[0].write(f"**当前轮次：** {assistant_count}")
+        detail_cols[1].write(f"**上下文追问：** {st.session_state.followup_count}")
+        detail_cols[2].write(f"**已用知识点：** {len(st.session_state.used_knowledge_ids)}")
+        detail_cols[3].write(f"**RAG 条目：** {kb_stats['total_entries']}")
+
+
+def render_radar_chart(dimension_details):
+    labels = list(dimension_details.keys())
+    scores = [float(dimension_details[label].get("score", 0)) for label in labels]
+    if not labels:
+        return
+
+    center_x, center_y = 240, 210
+    radius = 135
+    points = []
+    axis_lines = []
+    label_nodes = []
+    for idx, (label, score) in enumerate(zip(labels, scores)):
+        angle = -math.pi / 2 + idx * 2 * math.pi / len(labels)
+        outer_x = center_x + radius * math.cos(angle)
+        outer_y = center_y + radius * math.sin(angle)
+        value_radius = radius * max(0, min(score, 100)) / 100
+        value_x = center_x + value_radius * math.cos(angle)
+        value_y = center_y + value_radius * math.sin(angle)
+        label_x = center_x + (radius + 42) * math.cos(angle)
+        label_y = center_y + (radius + 28) * math.sin(angle)
+        points.append(f"{value_x:.1f},{value_y:.1f}")
+        axis_lines.append(
+            f'<line x1="{center_x}" y1="{center_y}" x2="{outer_x:.1f}" y2="{outer_y:.1f}" '
+            'stroke="#d0d5dd" stroke-width="1" />'
+        )
+        label_nodes.append(
+            f'<text x="{label_x:.1f}" y="{label_y:.1f}" text-anchor="middle" '
+            'font-size="13" fill="#344054">'
+            f"{label} {score:.0f}</text>"
+        )
+
+    grid_polygons = []
+    for pct in [20, 40, 60, 80, 100]:
+        grid_points = []
+        for idx in range(len(labels)):
+            angle = -math.pi / 2 + idx * 2 * math.pi / len(labels)
+            grid_radius = radius * pct / 100
+            grid_points.append(
+                f"{center_x + grid_radius * math.cos(angle):.1f},{center_y + grid_radius * math.sin(angle):.1f}"
+            )
+        grid_polygons.append(
+            f'<polygon points="{" ".join(grid_points)}" fill="none" stroke="#eaecf0" stroke-width="1" />'
+        )
+
+    svg = f"""
+    <div style="display:flex; justify-content:center; margin: 0.5rem 0 1rem;">
+      <svg viewBox="0 0 480 430" width="100%" style="max-width: 620px;">
+        {''.join(grid_polygons)}
+        {''.join(axis_lines)}
+        <polygon points="{' '.join(points)}" fill="rgba(46, 144, 250, 0.28)" stroke="#2e90fa" stroke-width="3" />
+        {''.join(label_nodes)}
+      </svg>
+    </div>
+    """
+    st.markdown(svg, unsafe_allow_html=True)
+
+
+def render_bullet_card(title, items):
+    with st.container(border=True):
+        st.markdown(f"#### {title}")
+        for item in items:
+            st.write(f"- {item}")
+
+
+def render_rag_page():
+    if st.button("返回模拟面试"):
+        go_to_page("interview")
+    st.title("RAG知识库")
+    st.subheader("知识库检索")
+
+    stats = get_kb_stats()
+    st.markdown("### 知识库统计")
+    st.json(stats)
+
+    search_query = st.text_input(
+        "输入关键词检索知识库",
+        placeholder="例如：Python MySQL Redis 后端开发 事务 索引"
+    )
+
+    if search_query:
+        results = retrieve_by_query(search_query, top_k=8)
+        st.markdown("### 检索结果")
+        if not results:
+            st.warning("没有检索到相关知识条目。")
+        for item in results:
+            with st.expander(f"匹配分 {item.get('_score', 0)}｜{item.get('id')}｜{item.get('question')}"):
+                st.write(f"**方向：** {item.get('category')}")
+                st.write(f"**标签：** {', '.join(item.get('tags', []))}")
+                st.write(f"**难度：** {item.get('difficulty')}")
+                st.write(f"**参考答案：** {item.get('answer')}")
+                st.write(f"**可追问：** {'；'.join(item.get('follow_up', []))}")
+                st.caption(f"来源：{item.get('source')}")
+
+    st.markdown("### 当前简历推荐问题")
+    if st.session_state.profile:
+        recommended = retrieve_by_profile(st.session_state.profile, top_k=8)
+        for item in recommended:
+            with st.expander(f"{item.get('id')}｜{item.get('category')}｜{item.get('question')}"):
+                st.write(f"**标签：** {', '.join(item.get('tags', []))}")
+                st.write(f"**难度：** {item.get('difficulty')}")
+                st.write(f"**参考答案：** {item.get('answer')}")
+                st.write(f"**可追问：** {'；'.join(item.get('follow_up', []))}")
+    else:
+        st.info("请先进入模拟面试并解析简历，系统会根据简历技术栈推荐 RAG 问题。")
+
+
+
+def render_self_check_page():
+    if st.button("返回模拟面试"):
+        go_to_page("interview")
+    st.title("项目说明与运行检查")
+
+    st.markdown("### 核心闭环")
+    st.code(
+        "简历输入/解析 → 用户画像 → RAG 检索 → 连续面试 → 项目追问 → 回答分析 → 五维度评分报告",
+        language="text"
+    )
+
+    st.markdown("### LLM 配置状态")
+    llm_config = get_llm_config()
+    st.json({
+        "是否启用LLM": llm_config.get("use_llm", ""),
+        "模型名称": llm_config.get("model_name", ""),
+        "接口地址": llm_config.get("base_url", ""),
+        "API密钥": get_masked_api_key() or "未配置",
+        "连接状态": "已启用" if is_llm_enabled() else "未启用"
+    })
+
+    if st.button("检查 LLM 连接", type="primary"):
+        result = test_llm_connection()
+        if result.get("ok"):
+            st.success(result.get("message"))
+        else:
+            st.error(result.get("message"))
+        st.json(result)
+
+    st.markdown("### 项目文件状态")
+    required_files = [
+        "app.py",
+        "requirements.txt",
+        "README.md",
+        ".env.example",
+        "data/knowledge_base.json",
+        "data/sample_resume.txt",
+        "src/llm_client.py",
+        "src/resume_parser.py",
+        "src/rag_retriever.py",
+        "src/interviewer.py",
+        "src/answer_analyzer.py",
+        "src/evaluator.py",
+        "docs/llm_config_guide.md",
+        "docs/rag_build_guide.md",
+        "docs/design_document_draft.md",
+        "docs/demo_script.md",
+        "docs/test_checklist.md",
+        "docs/final_submission_checklist.md",
+        "demo/sample_resume_ai_app.txt",
+        "demo/sample_resume_backend.txt",
+        "demo/sample_answers_ai_app.md",
+        "demo/demo_walkthrough.md",
+        "scripts/self_check.py",
+    ]
+    root = Path(".")
+    check_rows = []
+    for rel in required_files:
+        check_rows.append({
+            "file": rel,
+            "exists": (root / rel).exists()
+        })
+    st.dataframe(check_rows, use_container_width=True)
+
+    st.markdown("### 提交前检查清单")
+    checklist = [
+        "项目能通过 streamlit run app.py 正常启动",
+        "可以解析简历并生成用户画像",
+        "RAG 知识库能显示条目总数并完成检索",
+        "侧边栏可以加载示例简历",
+        "模拟面试能连续进行并触发追问",
+        "当前题目能展示生成方式、难度、知识点和预期回答要点",
+        "面试记录与分析页面有记录",
+        "评分报告能生成总分、五维度评分和建议",
+        "LLM 连接检查成功",
+        "USE_LLM=false 时备用出题机制可用",
+        ".env 未上传到 GitHub",
+        "README、demo walkthrough、设计文档和最终提交清单已准备",
+        "演示视频控制在 8 分钟内"
+    ]
+    for item in checklist:
+        st.write(f"- [ ] {item}")
+
+    st.markdown("### 推荐命令")
+    st.code(
+        ".venv\\Scripts\\activate\n"
+        "python scripts/self_check.py\n"
+        "streamlit run app.py",
+        language="bash"
+    )
+
+    st.markdown("### 文档位置")
+    st.write("- LLM 配置教程：`docs/llm_config_guide.md`")
+    st.write("- RAG 构建说明：`docs/rag_build_guide.md`")
+    st.write("- 项目设计文档初稿：`docs/design_document_draft.md`")
+    st.write("- 演示视频脚本：`docs/demo_script.md`")
+    st.write("- 测试清单：`docs/test_checklist.md`")
+    st.write("- 最终提交清单：`docs/final_submission_checklist.md`")
+    st.write("- 演示流程：`demo/demo_walkthrough.md`")
+    st.write("- 示例回答：`demo/sample_answers_ai_app.md`")
+
+
+    st.markdown("### 最终提交建议")
+    st.write("1. 运行 self_check.py 并确保通过。")
+    st.write("2. 检查 LLM 连接，确认简历可以优先使用 LLM 解析。")
+    st.write("3. 完成一次完整面试流程，生成评分报告。")
+    st.write("4. 按 docs/demo_script.md 录制不超过 8 分钟演示视频。")
+    st.write("5. 上传 GitHub，并提交项目设计文档与视频。")
 
 
 def apply_pending_session_actions():
@@ -530,7 +1142,18 @@ def register_question_usage(question_meta):
 
 apply_pending_session_actions()
 
+if st.session_state.current_page == "home":
+    render_home_page()
+    st.stop()
+if st.session_state.current_page == "intro":
+    render_intro_page()
+    st.stop()
+
 with st.sidebar:
+    if st.button("返回主页", use_container_width=True):
+        go_to_page("home")
+    st.divider()
+
     st.header("面试记录")
     st.caption(f"当前：{st.session_state.current_session_title}")
 
@@ -551,8 +1174,6 @@ with st.sidebar:
             st.session_state.pending_new_session_difficulty = st.session_state.new_session_difficulty
             st.rerun()
 
-    st.divider()
-
     try:
         sessions, session_warnings = list_sessions()
     except Exception as exc:
@@ -564,7 +1185,7 @@ with st.sidebar:
         title = item.get("title") or "未命名面试"
         updated_at = item.get("updated_at", "")
         display_time = updated_at[11:16] if len(updated_at) >= 16 else updated_at
-        status_label = item.get("status") or "created"
+        status_label = get_status_label(item.get("status"))
         is_current = session_id == st.session_state.current_session_id
         st.caption(display_time or "未记录时间")
         button_label = f"{title}｜{status_label}{'｜当前' if is_current else ''}"
@@ -594,6 +1215,12 @@ with st.sidebar:
             for item in session_warnings:
                 st.write(f"- {item}")
 
+    st.divider()
+    st.subheader("其他功能")
+    if st.button("RAG知识库", use_container_width=True):
+        go_to_page("rag")
+    if st.button("项目说明与运行检查", use_container_width=True):
+        go_to_page("self_check")
     with st.expander("演示辅助工具", expanded=False):
         sample_choice = st.selectbox("示例简历", list(SAMPLE_RESUMES.keys()))
         if st.button("加载示例简历"):
@@ -609,38 +1236,35 @@ with st.sidebar:
             st.rerun()
         st.caption("“重置当前面试”会保留简历画像；“清空全部记录”会清空简历、画像、面试和报告。")
 
+    st.divider()
+    st.subheader("系统状态")
+    sidebar_config = get_llm_config()
+    st.write(f"**LLM：** {'已启用' if is_llm_enabled() else '未启用'}")
+    st.write(f"**模型：** {sidebar_config.get('model_name') or '未配置'}")
+    st.write("**备用出题：** 可用")
+
 target_role = st.session_state.selected_target_role
 difficulty = st.session_state.selected_difficulty
 config = get_llm_config()
 kb_stats = get_kb_stats()
 assistant_count = len([m for m in st.session_state.messages if m.get("role") == "assistant"])
-current_status = infer_session_status()
+current_status = get_status_label(infer_session_status())
 
-with st.expander("当前面试信息", expanded=False):
-    info_cols = st.columns(5)
-    info_cols[0].metric("目标岗位", target_role)
-    info_cols[1].metric("难度", difficulty)
-    info_cols[2].metric("状态", current_status)
-    info_cols[3].metric("已回答", len(st.session_state.interview_records))
-    info_cols[4].metric("报告", "已生成" if st.session_state.final_report else "未生成")
+if st.session_state.current_page == "rag":
+    render_rag_page()
+    st.stop()
+if st.session_state.current_page == "self_check":
+    render_self_check_page()
+    st.stop()
 
-    detail_cols = st.columns(4)
-    detail_cols[0].write(f"**当前轮次：** {assistant_count}")
-    detail_cols[1].write(f"**上下文追问：** {st.session_state.followup_count}")
-    detail_cols[2].write(f"**已用知识点：** {len(st.session_state.used_knowledge_ids)}")
-    detail_cols[3].write(f"**RAG 条目：** {kb_stats['total_entries']}")
-    if is_llm_enabled():
-        st.success(f"LLM 已启用：{config['model_name']}")
-    else:
-        st.warning("LLM 未启用，系统将使用备用出题机制。")
+st.header("模拟面试工作台")
+render_realtime_status(target_role, difficulty, current_status, assistant_count, kb_stats)
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4 = st.tabs([
     "1. 简历输入与解析",
-    "2. RAG 知识库",
-    "3. 模拟面试",
-    "4. 面试记录与分析",
-    "5. 评分报告",
-    "6. 项目说明与运行检查"
+    "2. 模拟面试",
+    "3. 面试记录与分析",
+    "4. 评分报告"
 ])
 
 with tab1:
@@ -685,11 +1309,11 @@ with tab1:
 
     col1, col2, col3 = st.columns([1, 1, 1])
     with col1:
-        parse_btn = st.button("解析简历并生成画像", type="primary")
+        parse_btn = st.button("解析简历并生成画像", type="primary", use_container_width=True)
     with col2:
-        save_btn = st.button("保存解析结果 JSON")
+        save_btn = st.button("保存解析结果 JSON", use_container_width=True)
     with col3:
-        clear_btn = st.button("清空当前内容")
+        clear_btn = st.button("清空当前内容", use_container_width=True)
 
     if clear_btn:
         reset_all_state()
@@ -759,44 +1383,6 @@ with tab1:
             st.info("暂未匹配到 RAG 问题。可以检查简历技术栈或知识库标签。")
 
 with tab2:
-    st.subheader("RAG 知识库检索")
-
-    stats = get_kb_stats()
-    st.markdown("### 知识库统计")
-    st.json(stats)
-
-    search_query = st.text_input(
-        "输入关键词检索知识库",
-        placeholder="例如：Python MySQL Redis 后端开发 事务 索引"
-    )
-
-    if search_query:
-        results = retrieve_by_query(search_query, top_k=8)
-        st.markdown("### 检索结果")
-        if not results:
-            st.warning("没有检索到相关知识条目。")
-        for item in results:
-            with st.expander(f"匹配分 {item.get('_score', 0)}｜{item.get('id')}｜{item.get('question')}"):
-                st.write(f"**方向：** {item.get('category')}")
-                st.write(f"**标签：** {', '.join(item.get('tags', []))}")
-                st.write(f"**难度：** {item.get('difficulty')}")
-                st.write(f"**参考答案：** {item.get('answer')}")
-                st.write(f"**可追问：** {'；'.join(item.get('follow_up', []))}")
-                st.caption(f"来源：{item.get('source')}")
-
-    st.markdown("### 当前简历推荐问题")
-    if st.session_state.profile:
-        recommended = retrieve_by_profile(st.session_state.profile, top_k=8)
-        for item in recommended:
-            with st.expander(f"{item.get('id')}｜{item.get('category')}｜{item.get('question')}"):
-                st.write(f"**标签：** {', '.join(item.get('tags', []))}")
-                st.write(f"**难度：** {item.get('difficulty')}")
-                st.write(f"**参考答案：** {item.get('answer')}")
-                st.write(f"**可追问：** {'；'.join(item.get('follow_up', []))}")
-    else:
-        st.info("请先在第 1 个页面解析简历，系统会根据简历技术栈推荐 RAG 问题。")
-
-with tab3:
     st.subheader("文字版模拟面试")
 
     if st.session_state.profile:
@@ -903,7 +1489,7 @@ with tab3:
     with st.expander("本轮原始问题元数据", expanded=False):
         st.json(st.session_state.question_meta)
 
-with tab4:
+with tab3:
     st.subheader("面试记录与回答分析")
 
     records = st.session_state.interview_records
@@ -938,7 +1524,7 @@ with tab4:
             mime="application/json"
         )
 
-with tab5:
+with tab4:
     st.subheader("正式面试评分报告")
     st.info("五维度评分权重保持不变：基础知识 25%、项目理解 25%、回答逻辑 20%、表达完整性 15%、岗位匹配度 15%。")
 
@@ -968,13 +1554,18 @@ with tab5:
 
     if report:
         st.markdown("### 总体结果")
-        col_a, col_b, col_c, col_d = st.columns(4)
+        col_a, col_b, col_c, col_d, col_e = st.columns(5)
         col_a.metric("总分", f"{report['total_score']} / 100")
         col_b.metric("等级", report["level"])
-        col_c.metric("回答数量", report["interview_summary"]["answer_count"])
-        col_d.metric("目标岗位", report.get("target_role") or "未明确")
+        col_c.metric("目标岗位", report.get("target_role") or "未明确")
+        col_d.metric("难度", report.get("difficulty") or "未明确")
+        col_e.metric("回答数量", report["interview_summary"]["answer_count"])
 
-        st.markdown("### 五维度评分")
+        st.markdown("### 五维度能力雷达图")
+        render_radar_chart(report.get("dimension_details", {}))
+        st.caption("雷达图用于页面展示，JSON 和 Markdown 下载仍保留结构化评分数据。")
+
+        st.markdown("### 维度得分详情")
         dim_cols = st.columns(5)
         for idx, (dim, detail) in enumerate(report["dimension_details"].items()):
             score = float(detail["score"])
@@ -990,17 +1581,13 @@ with tab5:
                 for ev in detail.get("evidence", []):
                     st.write(f"- {ev}")
 
-        with st.expander("表现较好的方面", expanded=True):
-            for item in report.get("strengths", []):
-                st.write(f"- {item}")
-
-        with st.expander("主要问题", expanded=True):
-            for item in report.get("main_problems", []):
-                st.write(f"- {item}")
-
-        with st.expander("后续提升建议", expanded=True):
-            for item in report.get("recommendations", []):
-                st.write(f"- {item}")
+        card_a, card_b, card_c = st.columns(3)
+        with card_a:
+            render_bullet_card("表现亮点", report.get("strengths", []))
+        with card_b:
+            render_bullet_card("主要问题", report.get("main_problems", []))
+        with card_c:
+            render_bullet_card("后续提升建议", report.get("recommendations", []))
 
         st.markdown("### 报告详情")
         with st.expander("查看报告 JSON", expanded=False):
@@ -1034,110 +1621,3 @@ with tab5:
             "常见问题": summary["common_problems"],
             "提示": "完成几轮面试后，点击“生成正式评分报告”。"
         })
-
-with tab6:
-    st.subheader("项目说明与运行检查")
-
-    st.markdown("### 核心闭环")
-    st.code(
-        "简历输入/解析 → 用户画像 → RAG 检索 → 连续面试 → 项目追问 → 回答分析 → 五维度评分报告",
-        language="text"
-    )
-
-    st.markdown("### LLM 配置状态")
-    llm_config = get_llm_config()
-    st.json({
-        "USE_LLM": llm_config.get("use_llm", ""),
-        "MODEL_NAME": llm_config.get("model_name", ""),
-        "LLM_BASE_URL": llm_config.get("base_url", ""),
-        "LLM_API_KEY": get_masked_api_key() or "未配置",
-        "enabled": is_llm_enabled()
-    })
-
-    if st.button("检查 LLM 连接", type="primary"):
-        result = test_llm_connection()
-        if result.get("ok"):
-            st.success(result.get("message"))
-        else:
-            st.error(result.get("message"))
-        st.json(result)
-
-    st.markdown("### 项目文件状态")
-    required_files = [
-        "app.py",
-        "requirements.txt",
-        "README.md",
-        ".env.example",
-        "data/knowledge_base.json",
-        "data/sample_resume.txt",
-        "src/llm_client.py",
-        "src/resume_parser.py",
-        "src/rag_retriever.py",
-        "src/interviewer.py",
-        "src/answer_analyzer.py",
-        "src/evaluator.py",
-        "docs/llm_config_guide.md",
-        "docs/rag_build_guide.md",
-        "docs/design_document_draft.md",
-        "docs/demo_script.md",
-        "docs/test_checklist.md",
-        "docs/final_submission_checklist.md",
-        "demo/sample_resume_ai_app.txt",
-        "demo/sample_resume_backend.txt",
-        "demo/sample_answers_ai_app.md",
-        "demo/demo_walkthrough.md",
-        "scripts/self_check.py",
-    ]
-    root = Path(".")
-    check_rows = []
-    for rel in required_files:
-        check_rows.append({
-            "file": rel,
-            "exists": (root / rel).exists()
-        })
-    st.dataframe(check_rows, use_container_width=True)
-
-    st.markdown("### 提交前检查清单")
-    checklist = [
-        "项目能通过 streamlit run app.py 正常启动",
-        "可以解析简历并生成用户画像",
-        "RAG 知识库能显示条目总数并完成检索",
-        "侧边栏可以加载示例简历",
-        "模拟面试能连续进行并触发追问",
-        "当前题目能展示生成方式、难度、知识点和预期回答要点",
-        "面试记录与分析页面有记录",
-        "评分报告能生成总分、五维度评分和建议",
-        "LLM 连接检查成功",
-        "USE_LLM=false 时备用出题机制可用",
-        ".env 未上传到 GitHub",
-        "README、demo walkthrough、设计文档和最终提交清单已准备",
-        "演示视频控制在 8 分钟内"
-    ]
-    for item in checklist:
-        st.write(f"- [ ] {item}")
-
-    st.markdown("### 推荐命令")
-    st.code(
-        ".venv\\Scripts\\activate\n"
-        "python scripts/self_check.py\n"
-        "streamlit run app.py",
-        language="bash"
-    )
-
-    st.markdown("### 文档位置")
-    st.write("- LLM 配置教程：`docs/llm_config_guide.md`")
-    st.write("- RAG 构建说明：`docs/rag_build_guide.md`")
-    st.write("- 项目设计文档初稿：`docs/design_document_draft.md`")
-    st.write("- 演示视频脚本：`docs/demo_script.md`")
-    st.write("- 测试清单：`docs/test_checklist.md`")
-    st.write("- 最终提交清单：`docs/final_submission_checklist.md`")
-    st.write("- 演示流程：`demo/demo_walkthrough.md`")
-    st.write("- 示例回答：`demo/sample_answers_ai_app.md`")
-
-
-    st.markdown("### 最终提交建议")
-    st.write("1. 运行 self_check.py 并确保通过。")
-    st.write("2. 检查 LLM 连接，确认简历可以优先使用 LLM 解析。")
-    st.write("3. 完成一次完整面试流程，生成评分报告。")
-    st.write("4. 按 docs/demo_script.md 录制不超过 8 分钟演示视频。")
-    st.write("5. 上传 GitHub，并提交项目设计文档与视频。")

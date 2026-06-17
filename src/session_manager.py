@@ -32,9 +32,13 @@ def make_json_safe(value: Any) -> Any:
 
 def generate_session_title(target_role: str = "", difficulty: str = "", created_at: Optional[str] = None) -> str:
     timestamp = created_at or now_text()
+    try:
+        display_time = datetime.strptime(timestamp[:19], "%Y-%m-%d %H:%M:%S").strftime("%m月%d日 %H:%M")
+    except Exception:
+        display_time = timestamp[:16]
     role = target_role or "模拟面试"
     level = difficulty or "中等"
-    return f"{timestamp[:16]} {role}｜{level}"
+    return f"{display_time}｜{role}｜{level}"
 
 
 def session_path(session_id: str) -> Path:
