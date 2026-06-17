@@ -2,6 +2,8 @@ from datetime import datetime
 import re
 from typing import Any, Dict, List, Tuple
 
+from src.product_features import generate_learning_recommendations, summarize_weak_points
+
 
 WEIGHTS = {
     "基础知识掌握程度": 0.25,
@@ -293,6 +295,16 @@ def build_final_report(records: List[Dict[str, Any]], profile: Dict[str, Any]) -
     if not strengths:
         strengths.append("候选人能够完成完整模拟面试流程，具备继续提升的基础。")
 
+    weak_points_summary = summarize_weak_points(records, dimension_scores)
+    learning_recommendations = generate_learning_recommendations(
+        target_role=profile.get("target_role", ""),
+        dimension_scores=dimension_scores,
+        weak_points=weak_points_summary,
+        detected_skills=profile.get("detected_skills", [])
+    )
+    role_mismatch_warning = profile.get("role_mismatch_warning", "")
+    resume_optimization_suggestions = profile.get("resume_optimization_suggestions", [])
+
     report = {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "target_role": profile.get("target_role", ""),
@@ -331,6 +343,10 @@ def build_final_report(records: List[Dict[str, Any]], profile: Dict[str, Any]) -
         "strengths": strengths,
         "main_problems": collect_common_problems(records) or ["暂无明显高频问题，但建议继续增加回答细节和技术深度。"],
         "recommendations": collect_recommendations(records, profile),
+        "role_mismatch_warning": role_mismatch_warning,
+        "resume_optimization_suggestions": resume_optimization_suggestions,
+        "weak_points_summary": weak_points_summary,
+        "learning_recommendations": learning_recommendations,
         "interview_summary": {
             "answer_count": len(records),
             "basic_question_count": len(get_records_by_type(records, BASIC_TYPES)),
@@ -370,6 +386,25 @@ def report_to_markdown(report: Dict[str, Any]) -> str:
     lines.append("")
     lines.append("## 主要问题")
     for item in report.get("main_problems", []):
+        lines.append(f"- {item}")
+    lines.append("")
+    lines.append("## 简历与岗位匹配建议")
+    mismatch = report.get("role_mismatch_warning", "")
+    suggestions = report.get("resume_optimization_suggestions", [])
+    if mismatch:
+        lines.append(f"- {mismatch}")
+    if suggestions:
+        for item in suggestions[:5]:
+            lines.append(f"- {item}")
+    if not mismatch and not suggestions:
+        lines.append("- 本次未发现明显简历与岗位方向冲突，建议继续强化与目标岗位相关的项目表达。")
+    lines.append("")
+    lines.append("## 错题与薄弱知识点总结")
+    for item in report.get("weak_points_summary", []) or ["本次面试暂无明显薄弱知识点，建议继续提升回答深度和项目案例表达。"]:
+        lines.append(f"- {item}")
+    lines.append("")
+    lines.append("## 学习建议推荐")
+    for item in report.get("learning_recommendations", []) or ["建议围绕目标岗位持续复盘基础知识、项目表达和回答结构。"]:
         lines.append(f"- {item}")
     lines.append("")
     lines.append("## 后续提升建议")

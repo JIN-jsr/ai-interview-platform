@@ -12,6 +12,12 @@ from pathlib import Path
 
 from src.llm_client import get_llm_config, get_masked_api_key, is_llm_enabled, test_llm_connection
 from src.profile_generator import generate_profile_from_parsed_resume
+from src.product_features import (
+    analyze_growth_reports,
+    detect_role_mismatch,
+    format_report_time,
+    generate_resume_optimization_suggestions,
+)
 from src.rag_retriever import get_kb_stats, retrieve_by_profile, retrieve_by_query
 from src.resume_file_loader import load_resume_files
 from src.resume_parser import parse_resume, simple_resume_summary
@@ -170,12 +176,62 @@ def inject_refined_bw_styles():
         .process-step {
             white-space: nowrap;
         }
+        div[data-testid="stPopover"] {
+            position: fixed;
+            right: 28px;
+            top: 92px;
+            z-index: 999;
+        }
+        div[data-testid="stPopover"] > button {
+            min-height: 42px;
+            border-radius: 999px;
+            background: var(--ui-black);
+            color: var(--ui-white);
+            border-color: var(--ui-black);
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
+        }
+        .status-card {
+            background: var(--ui-white);
+            border: 1px solid var(--ui-border);
+            border-radius: 14px;
+            padding: 12px 14px;
+            box-shadow: var(--ui-shadow);
+            min-height: 76px;
+        }
+        .status-label {
+            color: var(--ui-muted);
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+        .status-value {
+            color: var(--ui-black);
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1.35;
+        }
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--ui-black);
+            margin-right: 6px;
+        }
+        .status-muted {
+            color: var(--ui-muted);
+            font-size: 14px;
+            line-height: 1.7;
+        }
         @media (max-width: 900px) {
             .home-hero {
                 padding-top: 22vh !important;
             }
             .home-title {
                 white-space: normal !important;
+            }
+            div[data-testid="stPopover"] {
+                right: 16px;
+                top: 74px;
             }
         }
         </style>
@@ -257,12 +313,26 @@ if "pending_delete_session_id" not in st.session_state:
     st.session_state.pending_delete_session_id = None
 if "current_page" not in st.session_state:
     st.session_state.current_page = "home"
+if "role_mismatch_warning" not in st.session_state:
+    st.session_state.role_mismatch_warning = ""
+if "resume_optimization_suggestions" not in st.session_state:
+    st.session_state.resume_optimization_suggestions = []
+if "resume_withdraw_confirmed" not in st.session_state:
+    st.session_state.resume_withdraw_confirmed = False
+if "demo_answer_template" not in st.session_state:
+    st.session_state.demo_answer_template = ""
 
 
 DEMO_DIR = Path("demo")
 SAMPLE_RESUMES = {
     "AI 应用开发示例": DEMO_DIR / "sample_resume_ai_app.txt",
     "后端开发示例": DEMO_DIR / "sample_resume_backend.txt",
+    "数据分析示例": DEMO_DIR / "sample_resume_data_analysis.txt",
+}
+SAMPLE_ANSWER_TEMPLATES = {
+    "AI 应用开发示例": DEMO_DIR / "sample_answers_ai_app.md",
+    "后端开发示例": DEMO_DIR / "sample_answers_backend.md",
+    "数据分析示例": DEMO_DIR / "sample_answers_data_analysis.md",
 }
 
 STATUS_LABELS = {
@@ -308,6 +378,10 @@ def reset_all_state():
     st.session_state.parsed_resume = None
     st.session_state.profile = None
     st.session_state.rag_items = []
+    st.session_state.role_mismatch_warning = ""
+    st.session_state.resume_optimization_suggestions = []
+    st.session_state.resume_withdraw_confirmed = False
+    st.session_state.demo_answer_template = ""
 
 
 def build_combined_resume_text(manual_text, uploaded_text):
@@ -360,6 +434,9 @@ def build_session_payload(status=None):
         "followup_count": st.session_state.followup_count,
         "used_knowledge_ids": st.session_state.used_knowledge_ids,
         "used_categories": st.session_state.used_categories,
+        "role_mismatch_warning": st.session_state.role_mismatch_warning,
+        "resume_optimization_suggestions": st.session_state.resume_optimization_suggestions,
+        "demo_answer_template": st.session_state.demo_answer_template,
         "final_report": st.session_state.final_report,
         "report_markdown": st.session_state.report_markdown,
         "report_json": st.session_state.report_json,
@@ -388,6 +465,9 @@ def restore_session_state(session_data):
     st.session_state.followup_count = session_data.get("followup_count", 0)
     st.session_state.used_knowledge_ids = session_data.get("used_knowledge_ids", [])
     st.session_state.used_categories = session_data.get("used_categories", [])
+    st.session_state.role_mismatch_warning = session_data.get("role_mismatch_warning", "")
+    st.session_state.resume_optimization_suggestions = session_data.get("resume_optimization_suggestions", [])
+    st.session_state.demo_answer_template = session_data.get("demo_answer_template", "")
     st.session_state.final_report = session_data.get("final_report")
     st.session_state.report_markdown = session_data.get("report_markdown", "")
     st.session_state.report_json = session_data.get("report_json", "")
@@ -940,6 +1020,159 @@ def load_demo_resume(sample_name):
     autosave_current_session()
 
 
+def withdraw_resume_state():
+    st.session_state.resume_text = ""
+    st.session_state.uploaded_file_names = []
+    st.session_state.extracted_file_text = ""
+    st.session_state.parsed_resume = None
+    st.session_state.profile = None
+    st.session_state.rag_items = []
+    st.session_state.role_mismatch_warning = ""
+    st.session_state.resume_optimization_suggestions = []
+    st.session_state.resume_withdraw_confirmed = False
+    reset_interview_state()
+    autosave_current_session(status="created")
+
+
+def start_demo_session(target_role, difficulty, sample_key):
+    sample_path = SAMPLE_RESUMES.get(sample_key)
+    if not sample_path or not sample_path.exists():
+        st.warning(f"未找到演示简历：{sample_key}")
+        return
+    answer_path = SAMPLE_ANSWER_TEMPLATES.get(sample_key)
+    title = f"演示面试｜{target_role}｜{difficulty}"
+    new_session = create_new_session(target_role=target_role, difficulty=difficulty, title=title)
+    restore_session_state(new_session)
+    st.session_state.selected_target_role = target_role
+    st.session_state.selected_difficulty = difficulty
+    st.session_state.resume_text = sample_path.read_text(encoding="utf-8")
+    st.session_state.demo_answer_template = answer_path.read_text(encoding="utf-8") if answer_path and answer_path.exists() else ""
+    reset_interview_state()
+    autosave_current_session(status="created")
+    st.success("已创建新的演示面试，不会覆盖原有记录。请点击“解析简历并生成画像”。")
+
+
+def render_floating_status_panel(target_role, difficulty, current_status, assistant_count, kb_stats):
+    answered_count = len(st.session_state.interview_records)
+    expected_count = 8
+    report_status = "已生成" if st.session_state.final_report else "未生成"
+    trigger = f"● {current_status}  {answered_count} / {expected_count}"
+    with st.popover(trigger, use_container_width=False):
+        st.markdown("#### 实时面试状态")
+        core_cols = st.columns(4)
+        core_items = [
+            ("目标岗位", target_role or "未选择"),
+            ("面试难度", difficulty or "未选择"),
+            ("当前状态", current_status),
+            ("报告状态", report_status),
+        ]
+        for col, (label, value) in zip(core_cols, core_items):
+            with col:
+                st.markdown(
+                    f"""
+                    <div class="status-card">
+                      <div class="status-label">{label}</div>
+                      <div class="status-value"><span class="status-dot"></span>{value}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+        st.markdown("##### 进度")
+        progress = min(1.0, answered_count / expected_count)
+        st.progress(progress)
+        progress_cols = st.columns(4)
+        progress_cols[0].metric("已回答", answered_count)
+        progress_cols[1].metric("当前轮次", assistant_count)
+        progress_cols[2].metric("上下文追问", st.session_state.followup_count)
+        progress_cols[3].metric("已用知识点", len(st.session_state.used_knowledge_ids))
+
+        st.markdown("##### 系统信息")
+        st.markdown(
+            f"""
+            <div class="status-muted">
+            RAG 条目：{kb_stats.get('total_entries', 0)}<br>
+            LLM 状态：{'已启用' if is_llm_enabled() else '未启用'}<br>
+            备用出题机制：可用
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+def _completed_report_options():
+    try:
+        sessions, _ = list_sessions()
+    except Exception:
+        return []
+    options = []
+    for item in sessions:
+        session = load_session(item.get("session_id", ""))
+        if not session or not session.get("final_report"):
+            continue
+        report = session.get("final_report", {})
+        label = (
+            f"{format_report_time(report.get('generated_at') or session.get('updated_at'))}｜"
+            f"{report.get('target_role') or session.get('target_role')}｜"
+            f"{report.get('difficulty') or session.get('difficulty')}｜"
+            f"{report.get('total_score')}｜{report.get('level')}"
+        )
+        options.append({"label": label, "session": session, "report": report})
+    return options
+
+
+def render_growth_curve_page():
+    if st.button("返回模拟面试"):
+        go_to_page("interview")
+    st.title("能力成长曲线")
+    st.write("选择真实有效的已完成面试报告，生成总分与五维度能力趋势。")
+
+    options = _completed_report_options()
+    if len(options) < 2:
+        st.info("请至少完成两次生成报告的面试后，再查看能力成长曲线。")
+        return
+
+    label_to_option = {item["label"]: item for item in options}
+    selected_labels = st.multiselect(
+        "选择纳入分析的历史报告",
+        options=[item["label"] for item in options],
+        default=[item["label"] for item in options[: min(3, len(options))]],
+    )
+
+    if st.button("生成成长曲线", type="primary"):
+        if len(selected_labels) < 2:
+            st.warning("请至少选择两条已生成报告的面试记录。")
+            return
+        selected_reports = [label_to_option[label]["report"] for label in selected_labels]
+        selected_reports = sorted(selected_reports, key=lambda report: report.get("generated_at", ""))
+
+        score_rows = [
+            {
+                "时间": format_report_time(report.get("generated_at")),
+                "总分": float(report.get("total_score", 0) or 0)
+            }
+            for report in selected_reports
+        ]
+        st.markdown("### 总分趋势图")
+        st.line_chart(score_rows, x="时间", y="总分")
+
+        dimension_rows = []
+        for report in selected_reports:
+            row = {"时间": format_report_time(report.get("generated_at"))}
+            for dim, score in report.get("dimension_scores", {}).items():
+                row[dim] = float(score or 0)
+            dimension_rows.append(row)
+        st.markdown("### 五维度能力趋势图")
+        st.line_chart(dimension_rows, x="时间")
+
+        analysis = analyze_growth_reports(selected_reports)
+        st.markdown("### 成长总结")
+        st.write(analysis.get("summary"))
+        st.markdown("### 后续提升建议")
+        for item in analysis.get("recommendations", []):
+            st.write(f"- {item}")
+
+
 def render_question_metadata(meta):
     if not meta:
         st.info("当前还没有题目元数据。开始面试后会显示。")
@@ -967,6 +1200,30 @@ def render_question_metadata(meta):
         st.write(meta.get("reason") or "暂无出题依据。")
         if generated_by == "rule_fallback" and meta.get("fallback_reason"):
             st.warning(meta.get("fallback_reason"))
+
+    with st.expander("RAG 出题依据", expanded=False):
+        knowledge_id = meta.get("knowledge_id")
+        if knowledge_id:
+            st.write(f"**知识点 ID：** {knowledge_id}")
+            st.write(f"**知识类别：** {meta.get('category') or '未标注'}")
+            tags = meta.get("tags", [])
+            if tags:
+                st.write(f"**相关标签：** {'、'.join(str(tag) for tag in tags)}")
+            points = meta.get("expected_points", [])
+            if points:
+                st.markdown("**考察要点：**")
+                for point in points:
+                    st.write(f"- {point}")
+            if meta.get("reference_answer"):
+                st.markdown("**参考依据：**")
+                st.write(meta.get("reference_answer"))
+            scenarios = meta.get("related_project_scenarios", [])
+            if scenarios:
+                st.markdown("**可关联项目场景：**")
+                for scenario in scenarios[:3]:
+                    st.write(f"- {scenario}")
+        else:
+            st.caption("本题主要基于候选人简历与上下文生成。")
 
     with st.expander("原始问题元数据", expanded=False):
         st.json(meta)
@@ -1216,16 +1473,35 @@ with st.sidebar:
                 st.write(f"- {item}")
 
     st.divider()
-    st.subheader("其他功能")
+    st.subheader("更多功能")
     if st.button("RAG知识库", use_container_width=True):
         go_to_page("rag")
     if st.button("项目说明与运行检查", use_container_width=True):
         go_to_page("self_check")
-    with st.expander("演示辅助工具", expanded=False):
+    if st.button("能力成长曲线", use_container_width=True):
+        go_to_page("growth")
+    with st.expander("演示模式", expanded=False):
+        st.caption("一键演示会创建新的演示面试，不会覆盖当前记录。")
+        if st.button("一键加载后端开发演示", use_container_width=True):
+            start_demo_session("后端开发", "中等", "后端开发示例")
+            st.rerun()
+        if st.button("一键加载 AI 应用开发演示", use_container_width=True):
+            start_demo_session("AI应用开发", "中等", "AI 应用开发示例")
+            st.rerun()
+        if st.button("一键加载数据分析演示", use_container_width=True):
+            start_demo_session("数据分析", "困难", "数据分析示例")
+            st.rerun()
         sample_choice = st.selectbox("示例简历", list(SAMPLE_RESUMES.keys()))
         if st.button("加载示例简历"):
             load_demo_resume(sample_choice)
             st.rerun()
+        if st.button("一键清空演示数据"):
+            reset_all_state()
+            autosave_current_session(status="created")
+            st.rerun()
+        if st.session_state.demo_answer_template:
+            with st.expander("演示回答模板", expanded=False):
+                st.markdown(st.session_state.demo_answer_template)
         if st.button("重置当前面试"):
             reset_interview_state()
             autosave_current_session()
@@ -1256,9 +1532,12 @@ if st.session_state.current_page == "rag":
 if st.session_state.current_page == "self_check":
     render_self_check_page()
     st.stop()
+if st.session_state.current_page == "growth":
+    render_growth_curve_page()
+    st.stop()
 
 st.header("模拟面试工作台")
-render_realtime_status(target_role, difficulty, current_status, assistant_count, kb_stats)
+render_floating_status_panel(target_role, difficulty, current_status, assistant_count, kb_stats)
 
 tab1, tab2, tab3, tab4 = st.tabs([
     "1. 简历输入与解析",
@@ -1320,6 +1599,27 @@ with tab1:
         autosave_current_session()
         st.rerun()
 
+    has_resume_state = bool(
+        st.session_state.resume_text
+        or st.session_state.extracted_file_text
+        or st.session_state.uploaded_file_names
+        or st.session_state.parsed_resume
+        or st.session_state.profile
+    )
+    if has_resume_state:
+        st.markdown("### 简历操作")
+        needs_confirm = bool(st.session_state.interview_started or st.session_state.interview_records or st.session_state.messages)
+        if needs_confirm:
+            st.warning("撤回简历将清空当前面试问题、回答记录和评分报告。")
+            st.checkbox("我确认继续撤回当前简历", key="resume_withdraw_confirmed")
+        if st.button("重新上传 / 修改简历", use_container_width=True):
+            if needs_confirm and not st.session_state.resume_withdraw_confirmed:
+                st.warning("请先勾选确认后再撤回当前简历。")
+            else:
+                withdraw_resume_state()
+                st.success("当前简历与面试状态已清空，可以重新上传或粘贴简历。")
+                st.rerun()
+
     if parse_btn:
         if not resume_text.strip():
             st.warning("请先输入或上传简历内容。")
@@ -1332,11 +1632,23 @@ with tab1:
                     target_role=target_role,
                     difficulty=difficulty
                 )
+                mismatch = detect_role_mismatch(parsed_resume, profile, target_role)
+                role_mismatch_warning = mismatch.get("warning", "")
+                resume_suggestions = generate_resume_optimization_suggestions(
+                    parsed_resume=parsed_resume,
+                    profile=profile,
+                    target_role=target_role,
+                    mismatch_warning=role_mismatch_warning,
+                )
+                profile["role_mismatch_warning"] = role_mismatch_warning
+                profile["resume_optimization_suggestions"] = resume_suggestions
                 rag_items = retrieve_by_profile(profile, top_k=6)
 
             st.session_state.parsed_resume = parsed_resume
             st.session_state.profile = profile
             st.session_state.rag_items = rag_items
+            st.session_state.role_mismatch_warning = role_mismatch_warning
+            st.session_state.resume_optimization_suggestions = resume_suggestions
             reset_interview_state()
             st.success("简历解析完成，并已生成 RAG 推荐问题。")
             autosave_current_session()
@@ -1369,7 +1681,14 @@ with tab1:
 
     if st.session_state.profile:
         st.markdown("### 用户画像与面试重点")
+        if st.session_state.role_mismatch_warning:
+            st.warning(st.session_state.role_mismatch_warning)
         st.json(st.session_state.profile)
+
+        if st.session_state.resume_optimization_suggestions:
+            with st.expander("简历优化建议", expanded=True):
+                for item in st.session_state.resume_optimization_suggestions:
+                    st.write(f"- {item}")
 
         st.markdown("### 基于简历匹配到的 RAG 基础知识问题")
         if st.session_state.rag_items:
@@ -1544,7 +1863,10 @@ with tab4:
         if not records:
             st.warning("还没有面试记录。请先完成至少几轮模拟面试。")
         else:
-            st.session_state.final_report = build_final_report(records, profile)
+            report_profile = dict(profile)
+            report_profile["role_mismatch_warning"] = st.session_state.role_mismatch_warning
+            report_profile["resume_optimization_suggestions"] = st.session_state.resume_optimization_suggestions
+            st.session_state.final_report = build_final_report(records, report_profile)
             st.session_state.report_json = json.dumps(st.session_state.final_report, ensure_ascii=False, indent=2)
             st.session_state.report_markdown = report_to_markdown(st.session_state.final_report)
             st.success("正式评分报告已生成。")
@@ -1588,6 +1910,24 @@ with tab4:
             render_bullet_card("主要问题", report.get("main_problems", []))
         with card_c:
             render_bullet_card("后续提升建议", report.get("recommendations", []))
+
+        st.markdown("### 简历与岗位匹配建议")
+        if report.get("role_mismatch_warning"):
+            st.warning(report.get("role_mismatch_warning"))
+        resume_suggestions = report.get("resume_optimization_suggestions", [])
+        if resume_suggestions:
+            for item in resume_suggestions[:5]:
+                st.write(f"- {item}")
+        else:
+            st.write("本次未发现明显简历与岗位方向冲突，建议继续强化与目标岗位相关的项目表达。")
+
+        st.markdown("### 错题与薄弱知识点总结")
+        for item in report.get("weak_points_summary", []):
+            st.write(f"- {item}")
+
+        st.markdown("### 学习建议推荐")
+        for item in report.get("learning_recommendations", []):
+            st.write(f"- {item}")
 
         st.markdown("### 报告详情")
         with st.expander("查看报告 JSON", expanded=False):
