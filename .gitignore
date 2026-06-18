@@ -2,8 +2,16 @@
 .venv/
 __pycache__/
 *.pyc
+.pytest_cache/
+.streamlit/secrets.toml
 outputs/logs/*
+outputs/reports/
 outputs/reports/*
+outputs/sessions/
 outputs/sessions/*
+outputs/report_images/
+outputs/report_images/*
 !outputs/logs/.gitkeep
 !outputs/reports/.gitkeep
+!outputs/report_images/.gitkeep
+*.png

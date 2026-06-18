@@ -1,5 +1,7 @@
 import json
 import math
+import importlib
+import html
 from datetime import datetime
 import streamlit.components.v1 as components
 
@@ -22,6 +24,10 @@ from src.product_features import (
     ROLE_KEYWORDS,
 )
 from src.rag_retriever import get_kb_stats, retrieve_by_profile, retrieve_by_query
+from src.rag_display import attach_rag_display_fields
+from src.report_image_exporter import (
+    get_font_warning,
+)
 from src.resume_file_loader import read_uploaded_resume
 from src.resume_parser import parse_resume, simple_resume_summary
 from src.session_manager import (
@@ -35,7 +41,7 @@ from src.session_manager import (
 )
 
 st.set_page_config(
-    page_title="AI Mock Interview Platform",
+    page_title="AI 模拟面试与能力提升平台",
     page_icon="🎙️",
     layout="wide"
 )
@@ -86,6 +92,25 @@ def inject_refined_bw_styles():
             background: #1f2937;
             color: var(--ui-white);
             border-color: #1f2937;
+        }
+        div[data-testid="stDownloadButton"] > button,
+        div[data-testid="stDownloadButton"] button[kind="primary"],
+        div[data-testid="stDownloadButton"] button[data-testid="baseButton-primary"] {
+            background: var(--ui-black) !important;
+            color: var(--ui-white) !important;
+            border-color: var(--ui-black) !important;
+            min-height: 52px !important;
+            border-radius: 15px !important;
+            font-size: 17px !important;
+            font-weight: 650 !important;
+            box-shadow: none !important;
+        }
+        div[data-testid="stDownloadButton"] > button:hover,
+        div[data-testid="stDownloadButton"] button[kind="primary"]:hover,
+        div[data-testid="stDownloadButton"] button[data-testid="baseButton-primary"]:hover {
+            background: #1f2937 !important;
+            color: var(--ui-white) !important;
+            border-color: #1f2937 !important;
         }
         .home-hero {
             min-height: auto !important;
@@ -161,6 +186,67 @@ def inject_refined_bw_styles():
         .intro-card ul {
             margin: 0;
             padding-left: 1.2rem;
+        }
+        .report-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin: 12px 0 24px;
+        }
+        .report-metric-card,
+        .report-summary-card,
+        .report-list-card {
+            background: var(--ui-white);
+            border: 1px solid var(--ui-border);
+            border-radius: 14px;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+        }
+        .report-metric-card {
+            padding: 18px 20px;
+            min-height: 104px;
+        }
+        .report-metric-label {
+            color: var(--ui-muted);
+            font-size: 15px;
+            font-weight: 650;
+            margin-bottom: 12px;
+        }
+        .report-metric-value {
+            color: var(--ui-black);
+            font-size: 34px;
+            line-height: 1.15;
+            font-weight: 760;
+            word-break: break-word;
+        }
+        .report-summary-card {
+            padding: 18px 20px;
+            color: #374151;
+            font-size: 17px;
+            line-height: 1.75;
+            margin: 8px 0 16px;
+        }
+        .report-list-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 14px;
+            margin: 12px 0 24px;
+        }
+        .report-list-card {
+            padding: 20px 22px;
+            min-height: 150px;
+        }
+        .report-list-card h4 {
+            margin: 0 0 12px;
+            color: var(--ui-black);
+            font-size: 22px;
+            font-weight: 760;
+        }
+        .report-list-card ul {
+            margin: 0;
+            padding-left: 1.2rem;
+            color: #374151;
+            font-size: 16px;
+            line-height: 1.8;
         }
         .process-flow {
             display: flex;
@@ -319,6 +405,12 @@ if "followup_count" not in st.session_state:
     st.session_state.followup_count = 0
 if "final_report" not in st.session_state:
     st.session_state.final_report = None
+if "jump_to_report_tab" not in st.session_state:
+    st.session_state.jump_to_report_tab = False
+if "jump_to_report_tab_nonce" not in st.session_state:
+    st.session_state.jump_to_report_tab_nonce = 0
+if "jump_to_report_tab_processed_nonce" not in st.session_state:
+    st.session_state.jump_to_report_tab_processed_nonce = 0
 if "report_markdown" not in st.session_state:
     st.session_state.report_markdown = ""
 if "report_json" not in st.session_state:
@@ -389,6 +481,8 @@ SAMPLE_ANSWER_TEMPLATES = {
     "AI 应用开发示例": DEMO_DIR / "sample_answers_ai_app.md",
     "后端开发示例": DEMO_DIR / "sample_answers_backend.md",
     "数据分析示例": DEMO_DIR / "sample_answers_data_analysis.md",
+    "前端开发示例": DEMO_DIR / "sample_answers_frontend.md",
+    "软件测试示例": DEMO_DIR / "sample_answers_testing.md",
 }
 SAMPLE_RESUME_CONFIG = {
     "AI 应用开发示例": {"target_role": "AI应用开发", "difficulty": "中等"},
@@ -543,12 +637,13 @@ def remove_uploaded_resume_file(file_name):
 def get_uploaded_material_summary_text(manual_text=None):
     names = st.session_state.get("uploaded_file_names", []) or []
     manual = str(manual_text if manual_text is not None else st.session_state.get("resume_text", "")).strip()
+    joined_names = "、".join(names)
     if manual and names:
-        return f"已合并手动输入内容与 {len(names)} 个上传文件：{', '.join(names)}。"
+        return f"已合并手动输入内容与 {len(names)} 个上传文件：{joined_names}。"
     if len(names) == 1:
         return f"已读取 1 个文件：{names[0]}。"
     if len(names) > 1:
-        return f"已合并解析 {len(names)} 份材料：{', '.join(names)}。"
+        return f"已合并解析 {len(names)} 份材料：{joined_names}。"
     if manual:
         return "当前使用手动输入的简历文本。"
     return ""
@@ -1061,8 +1156,10 @@ def render_self_check_page():
     st.markdown("### 项目文件状态")
     required_files = [
         "app.py",
+        "start_app.bat",
         "requirements.txt",
         "README.md",
+        ".gitignore",
         ".env.example",
         "data/knowledge_base.json",
         "data/sample_resume.txt",
@@ -1072,16 +1169,29 @@ def render_self_check_page():
         "src/interviewer.py",
         "src/answer_analyzer.py",
         "src/evaluator.py",
+        "src/llm_feedback_polisher.py",
+        "src/rag_display.py",
+        "src/report_image_exporter.py",
         "docs/llm_config_guide.md",
         "docs/rag_build_guide.md",
-        "docs/design_document_draft.md",
+        "docs/Project_Design_Document.md",
         "docs/demo_script.md",
         "docs/test_checklist.md",
         "docs/final_submission_checklist.md",
         "demo/sample_resume_ai_app.txt",
         "demo/sample_resume_backend.txt",
+        "demo/sample_resume_frontend.txt",
+        "demo/sample_resume_data_analysis.txt",
+        "demo/sample_resume_testing.txt",
+        "demo/demo_answers.md",
+        "demo/README.md",
         "demo/sample_answers_ai_app.md",
+        "demo/sample_answers_backend.md",
+        "demo/sample_answers_data_analysis.md",
+        "demo/sample_answers_frontend.md",
+        "demo/sample_answers_testing.md",
         "demo/demo_walkthrough.md",
+        "start_app.bat",
         "scripts/self_check.py",
     ]
     root = Path(".")
@@ -1123,12 +1233,13 @@ def render_self_check_page():
     st.markdown("### 文档位置")
     st.write("- LLM 配置教程：`docs/llm_config_guide.md`")
     st.write("- RAG 构建说明：`docs/rag_build_guide.md`")
-    st.write("- 项目设计文档初稿：`docs/design_document_draft.md`")
+    st.write("- 项目设计文档：`docs/Project_Design_Document.md`")
     st.write("- 演示视频脚本：`docs/demo_script.md`")
     st.write("- 测试清单：`docs/test_checklist.md`")
     st.write("- 最终提交清单：`docs/final_submission_checklist.md`")
     st.write("- 演示流程：`demo/demo_walkthrough.md`")
-    st.write("- 示例回答：`demo/sample_answers_ai_app.md`")
+    st.write("- 演示数据说明：`demo/README.md`")
+    st.write("- 通用示例回答：`demo/demo_answers.md`")
 
 
     st.markdown("### 最终提交建议")
@@ -1402,7 +1513,7 @@ def render_growth_curve_page():
         st.line_chart(dimension_rows, x="时间")
 
         rule_analysis = analyze_growth_reports(selected_reports)
-        analysis = polish_growth_curve_with_llm(selected_reports, rule_analysis)
+        analysis = polish_growth_curve_with_llm_safe(selected_reports, rule_analysis)
         if analysis.get("source") == "llm":
             st.caption("已使用 LLM 优化总结表达。")
         else:
@@ -1422,13 +1533,14 @@ def render_question_metadata(meta):
         st.info("当前还没有题目元数据。开始面试后会显示。")
         return
 
+    meta = attach_rag_display_fields(meta, st.session_state.selected_target_role)
     generated_by = meta.get("generated_by", "unknown")
-    generated_label = "LLM 生成" if generated_by == "llm" else "备用机制" if generated_by == "rule_fallback" else generated_by
+    generated_label = "LLM 生成" if generated_by == "llm" else "备用出题机制" if generated_by == "rule_fallback" else generated_by
     meta_cols = st.columns(4)
     meta_cols[0].metric("题型", meta.get("type") or meta.get("question_type") or "unknown")
     meta_cols[1].metric("生成方式", generated_label)
     meta_cols[2].metric("难度", meta.get("difficulty", "未标注"))
-    meta_cols[3].metric("知识点", meta.get("knowledge_id") or "无")
+    meta_cols[3].metric("知识点", meta.get("display_id") or meta.get("knowledge_id") or "无")
     if generated_by == "llm":
         st.success("LLM 生成成功")
 
@@ -1448,8 +1560,10 @@ def render_question_metadata(meta):
     with st.expander("RAG 出题依据", expanded=False):
         knowledge_id = meta.get("knowledge_id")
         if knowledge_id:
-            st.write(f"**知识点 ID：** {knowledge_id}")
-            st.write(f"**知识类别：** {meta.get('category') or '未标注'}")
+            st.write(f"**知识点 ID：** {meta.get('display_id') or knowledge_id}")
+            if meta.get("display_topic"):
+                st.write(f"**知识主题：** {meta.get('display_topic')}")
+            st.write(f"**知识类别：** {meta.get('display_category') or meta.get('category') or '未标注'}")
             tags = meta.get("tags", [])
             if tags:
                 st.write(f"**相关标签：** {'、'.join(str(tag) for tag in tags)}")
@@ -1497,12 +1611,58 @@ def scroll_to_latest_message():
     )
 
 
+def render_report_tab_jump_script(nonce):
+    components.html(
+        f"""
+        <script>
+        const reportJumpNonce = {int(nonce)};
+        function openReportTab() {{
+            const doc = window.parent.document;
+            const tabs = Array.from(doc.querySelectorAll('button[role="tab"], [data-baseweb="tab"]'));
+            const reportTab = tabs.find((tab) => {{
+                const text = (tab.innerText || tab.textContent || "").trim();
+                return text.includes("评分报告");
+            }});
+            if (reportTab) {{
+                reportTab.click();
+                setTimeout(() => {{
+                    const anchor = doc.getElementById("report-section-anchor");
+                    if (anchor) {{
+                        anchor.scrollIntoView({{ behavior: "smooth", block: "start" }});
+                    }}
+                }}, 260);
+            }}
+        }}
+        setTimeout(openReportTab, 80);
+        setTimeout(openReportTab, 260);
+        setTimeout(openReportTab, 620);
+        </script>
+        """,
+        height=0,
+    )
+
+
+def jump_to_report_tab_once():
+    nonce = st.session_state.get("jump_to_report_tab_nonce", 0)
+    if not st.session_state.get("jump_to_report_tab") and nonce <= st.session_state.get("jump_to_report_tab_processed_nonce", 0):
+        return
+    if nonce <= st.session_state.get("jump_to_report_tab_processed_nonce", 0):
+        nonce = st.session_state.get("jump_to_report_tab_processed_nonce", 0) + 1
+    st.session_state.jump_to_report_tab = False
+    st.session_state.jump_to_report_tab_processed_nonce = nonce
+    render_report_tab_jump_script(nonce)
+
+
 def build_interview_record(question_meta, user_answer, analysis):
+    question_meta = attach_rag_display_fields(question_meta, st.session_state.selected_target_role)
     generated_by = question_meta.get("generated_by", "rule_fallback")
     return {
         "question": question_meta.get("question", ""),
         "question_type": question_meta.get("type", "unknown"),
         "knowledge_id": question_meta.get("knowledge_id", ""),
+        "display_id": question_meta.get("display_id", ""),
+        "display_category": question_meta.get("display_category", ""),
+        "display_topic": question_meta.get("display_topic", ""),
         "reference_answer": question_meta.get("reference_answer", ""),
         "expected_points": question_meta.get("expected_points", []),
         "related_project_scenarios": question_meta.get("related_project_scenarios", []),
@@ -1519,6 +1679,181 @@ def build_interview_record(question_meta, user_answer, analysis):
     }
 
 
+def build_report_profile(records, profile):
+    incomplete = is_interview_incomplete(records)
+    report_profile = dict(profile or {})
+    report_profile["role_mismatch_warning"] = st.session_state.role_mismatch_warning
+    report_profile["role_mismatch_detail"] = st.session_state.role_mismatch_detail
+    report_profile["resume_optimization_suggestions"] = st.session_state.resume_optimization_suggestions
+    report_profile["is_incomplete_interview"] = incomplete
+    report_profile["incomplete_report_warning"] = INCOMPLETE_REPORT_WARNING if incomplete else ""
+    return report_profile
+
+
+def generate_and_store_final_report(records, profile):
+    st.session_state.final_report = build_final_report(records, build_report_profile(records, profile))
+    st.session_state.report_json = json.dumps(st.session_state.final_report, ensure_ascii=False, indent=2)
+    st.session_state.report_markdown = report_to_markdown(st.session_state.final_report)
+    autosave_current_session(status="completed")
+    return st.session_state.final_report
+
+
+def ensure_report_auxiliary_sections_safe(report, records, profile):
+    try:
+        evaluator_module = importlib.import_module("src.evaluator")
+        if not hasattr(evaluator_module, "ensure_report_auxiliary_sections"):
+            evaluator_module = importlib.reload(evaluator_module)
+        helper = getattr(evaluator_module, "ensure_report_auxiliary_sections", None)
+        if helper:
+            return helper(report, records, profile)
+    except Exception:
+        return report
+    return report
+
+
+def polish_growth_curve_with_llm_safe(reports, rule_analysis):
+    try:
+        polisher_module = importlib.import_module("src.llm_feedback_polisher")
+        polisher_module = importlib.reload(polisher_module)
+        return polisher_module.polish_growth_curve_with_llm(reports, rule_analysis)
+    except Exception:
+        return polish_growth_curve_with_llm(reports, rule_analysis)
+
+
+REPORT_IMAGE_EXPORT_VERSION = "2026-06-19-radar-no-ellipsis-v3"
+
+
+@st.cache_data(show_spinner=False)
+def cached_full_report_png(report_json: str, records_json: str, export_version: str) -> bytes:
+    exporter_module = importlib.reload(importlib.import_module("src.report_image_exporter"))
+    return exporter_module.generate_full_report_png(
+        json.loads(report_json),
+        json.loads(records_json) if records_json else [],
+    )
+
+
+@st.cache_data(show_spinner=False)
+def cached_summary_poster_png(report_json: str, records_json: str, export_version: str) -> bytes:
+    exporter_module = importlib.reload(importlib.import_module("src.report_image_exporter"))
+    return exporter_module.generate_summary_poster_png(
+        json.loads(report_json),
+        json.loads(records_json) if records_json else [],
+    )
+
+
+def render_report_overview(report):
+    summary = report.get("interview_summary", {}) or {}
+    status = "阶段性报告" if report.get("is_incomplete_interview") else "完整报告"
+    render_report_metric_cards([
+        ("目标岗位", report.get("target_role") or "未明确"),
+        ("难度", report.get("difficulty") or "未明确"),
+        ("答题数量", summary.get("answer_count", 0)),
+        ("基础知识题", summary.get("basic_question_count", 0)),
+        ("项目深挖题", summary.get("project_question_count", 0)),
+        ("总分", f"{report.get('total_score')} / 100"),
+        ("等级", report.get("level", "")),
+        ("报告状态", status),
+    ])
+
+
+def render_distribution_section(report):
+    distribution = report.get("question_distribution", {}) or {}
+    st.markdown("### 问题难度与类型分布")
+    render_report_summary(distribution.get("summary") or "暂无问题分布摘要。")
+    render_report_metric_cards([
+        ("LLM 生成", distribution.get("llm_question_count", 0)),
+        ("备用出题机制", distribution.get("fallback_question_count", 0)),
+        ("其他题型", distribution.get("other_question_count", 0)),
+        ("难度", distribution.get("difficulty") or "未明确"),
+    ])
+    type_counts = distribution.get("type_counts", {}) or {}
+    if type_counts:
+        render_report_metric_cards([
+            (question_type_display_name(question_type), f"{count} 题")
+            for question_type, count in type_counts.items()
+        ])
+
+
+def render_stability_and_ability(report):
+    stability = report.get("answer_stability", {}) or {}
+    ability = report.get("role_ability_coverage", {}) or {}
+
+    st.markdown("### 回答稳定性分析")
+    render_report_summary(stability.get("summary") or "暂无回答稳定性摘要。")
+    render_report_metric_cards([
+        ("平均覆盖率", stability.get("average_coverage", 0)),
+        ("高覆盖回答", stability.get("high_coverage_count", 0)),
+        ("低覆盖回答", stability.get("low_coverage_count", 0)),
+    ])
+
+    st.markdown("### 岗位能力覆盖图")
+    render_report_summary(ability.get("summary") or "暂无岗位能力覆盖摘要。")
+    render_report_list_cards([
+        ("已覆盖能力", ability.get("covered_abilities", []) or ["暂无明显覆盖"]),
+        ("待补强能力", ability.get("missing_or_weak_abilities", []) or ["暂无明显薄弱项"]),
+    ])
+
+
+def render_weak_point_cards(report):
+    cards = report.get("weak_point_cards", []) or []
+    if not cards:
+        return
+    st.markdown("### 薄弱点卡片")
+    cols = st.columns(3)
+    for idx, card in enumerate(cards):
+        with cols[idx % 3]:
+            st.markdown(f"**{card.get('title', '薄弱点')}**")
+            if card.get("evidence"):
+                st.caption(card.get("evidence"))
+            if card.get("suggestion"):
+                st.write(card.get("suggestion"))
+
+
+def render_report_shortcut(records, profile):
+    if not st.session_state.show_report_shortcut:
+        return
+    st.markdown("### 评分报告快捷入口")
+    st.caption("这里是从面试结束页打开的报告区，不会自动生成报告。")
+    if not records:
+        st.warning("还没有面试记录，暂时无法生成报告。")
+        return
+    col_generate, col_close = st.columns([1, 1])
+    with col_generate:
+        if st.button("生成正式评分报告", type="primary", key="generate_report_shortcut"):
+            generate_and_store_final_report(records, profile)
+            st.success("正式评分报告已生成。")
+            st.rerun()
+    with col_close:
+        if st.button("收起报告快捷入口", key="close_report_shortcut"):
+            st.session_state.show_report_shortcut = False
+            st.rerun()
+    if st.session_state.final_report:
+        report = st.session_state.final_report
+        render_report_overview(report)
+        render_distribution_section(report)
+        render_stability_and_ability(report)
+        render_weak_point_cards(report)
+        json_text = st.session_state.report_json or json.dumps(report, ensure_ascii=False, indent=2)
+        md_text = st.session_state.report_markdown or report_to_markdown(report)
+        col_json, col_md = st.columns(2)
+        with col_json:
+            st.download_button(
+                "下载评分报告 JSON",
+                data=json_text,
+                file_name=f"final_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json",
+                key="download_report_json_shortcut",
+            )
+        with col_md:
+            st.download_button(
+                "下载评分报告 Markdown",
+                data=md_text,
+                file_name=f"final_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+                mime="text/markdown",
+                key="download_report_md_shortcut",
+            )
+
+
 def latest_user_message_index():
     for idx in range(len(st.session_state.messages) - 1, -1, -1):
         if st.session_state.messages[idx].get("role") == "user":
@@ -1531,6 +1866,69 @@ def assistant_count_before(message_index):
         message for message in st.session_state.messages[:message_index]
         if message.get("role") == "assistant"
     ])
+
+
+def is_current_interview_ended():
+    current_type = (st.session_state.current_question_meta or {}).get("type")
+    if current_type == "end":
+        return True
+    if st.session_state.question_meta:
+        return (st.session_state.question_meta[-1] or {}).get("type") == "end"
+    return False
+
+
+def question_type_display_name(question_type):
+    labels = {
+        "intro": "自我介绍",
+        "project": "项目问题",
+        "project_followup": "项目追问",
+        "rag_basic": "基础知识题",
+        "rag_followup": "知识点追问",
+        "basic": "基础题",
+        "comprehensive": "综合问题",
+        "end": "结束提示",
+        "unknown": "未标注题型",
+    }
+    return labels.get(str(question_type or "unknown"), str(question_type or "未标注题型"))
+
+
+def _esc(value):
+    return html.escape(str(value if value is not None else ""), quote=True)
+
+
+def render_report_metric_cards(items):
+    cards = []
+    for label, value in items:
+        cards.append(
+            '<div class="report-metric-card">'
+            f'<div class="report-metric-label">{_esc(label)}</div>'
+            f'<div class="report-metric-value">{_esc(value)}</div>'
+            '</div>'
+        )
+    st.markdown(f'<div class="report-card-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
+
+
+def render_report_summary(text):
+    st.markdown(
+        f'<div class="report-summary-card">{_esc(text or "暂无摘要。")}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_report_list_cards(groups):
+    cards = []
+    for title, items in groups:
+        clean_items = [str(item) for item in (items or []) if str(item).strip()]
+        if not clean_items:
+            clean_items = ["暂无"]
+        lis = "".join(f"<li>{_esc(item)}</li>" for item in clean_items)
+        cards.append(
+            '<div class="report-list-card">'
+            f"<h4>{_esc(title)}</h4>"
+            f"<ul>{lis}</ul>"
+            "</div>"
+        )
+    st.markdown(f'<div class="report-list-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
 
 
 def rebuild_question_usage():
@@ -1633,6 +2031,8 @@ def render_latest_answer_editor(disabled=False, answer_text=None, key_suffix="")
 
 
 def register_question_usage(question_meta):
+    if question_meta is not None:
+        question_meta.update(attach_rag_display_fields(question_meta, st.session_state.selected_target_role))
     knowledge_id = (question_meta or {}).get("knowledge_id")
     category = (question_meta or {}).get("category")
     if knowledge_id and knowledge_id not in st.session_state.used_knowledge_ids:
@@ -1791,6 +2191,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "3. 面试记录与分析",
     "4. 评分报告"
 ])
+jump_to_report_tab_once()
 
 with tab1:
     st.subheader("输入或上传简历")
@@ -1970,7 +2371,13 @@ with tab1:
         st.markdown("### 基于简历匹配到的 RAG 基础知识问题")
         if st.session_state.rag_items:
             for item in st.session_state.rag_items:
-                with st.expander(f"{item.get('id')}｜{item.get('category')}｜{item.get('question')}"):
+                display_item = attach_rag_display_fields(item, st.session_state.selected_target_role)
+                title_parts = [
+                    display_item.get("display_id") or item.get("id"),
+                    display_item.get("display_category") or item.get("category"),
+                    display_item.get("display_topic") or item.get("question"),
+                ]
+                with st.expander("｜".join(str(part) for part in title_parts if part)):
                     st.write(f"**标签：** {', '.join(item.get('tags', []))}")
                     st.write(f"**难度：** {item.get('difficulty')}")
                     st.write(f"**参考答案：** {item.get('answer')}")
@@ -2022,6 +2429,12 @@ with tab2:
                 if assistant_meta_index < len(st.session_state.question_meta):
                     meta = st.session_state.question_meta[assistant_meta_index]
                 render_assistant_question_details(meta)
+                if meta and meta.get("type") == "end":
+                    if st.button("查看报告", type="primary", use_container_width=True, key=f"view_report_{assistant_meta_index}"):
+                        st.session_state.jump_to_report_tab_nonce += 1
+                        render_report_tab_jump_script(st.session_state.jump_to_report_tab_nonce)
+                        st.session_state.jump_to_report_tab = False
+                        st.session_state.jump_to_report_tab_processed_nonce = st.session_state.jump_to_report_tab_nonce
                 assistant_meta_index += 1
             elif (
                 msg["role"] == "user"
@@ -2037,7 +2450,7 @@ with tab2:
         scroll_to_latest_message()
         st.session_state.scroll_to_latest = False
 
-    if st.session_state.interview_started:
+    if st.session_state.interview_started and not is_current_interview_ended():
         user_answer = st.chat_input("请输入你的回答……")
         if user_answer:
             clear_report_state()
@@ -2100,7 +2513,7 @@ with tab3:
         for idx, record in enumerate(records, start=1):
             title = f"第 {idx} 题｜{record.get('question_type')}｜回答评分 {record.get('analysis', {}).get('overall_temp_score')}/10"
             if record.get("knowledge_id"):
-                title += f"｜{record.get('knowledge_id')}"
+                title += f"｜{record.get('display_id') or record.get('knowledge_id')}"
             with st.expander(title, expanded=False):
                 st.markdown("**问题：**")
                 st.write(record.get("question", ""))
@@ -2117,10 +2530,12 @@ with tab3:
             "下载本轮面试记录 JSON",
             data=json_text,
             file_name=f"interview_records_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-            mime="application/json"
+            mime="application/json",
+            type="primary"
         )
 
 with tab4:
+    st.markdown('<div id="report-section-anchor"></div>', unsafe_allow_html=True)
     st.subheader("正式面试评分报告")
     st.info("五维度评分权重保持不变：基础知识 25%、项目理解 25%、回答逻辑 20%、表达完整性 15%、岗位匹配度 15%。")
 
@@ -2140,37 +2555,32 @@ with tab4:
         if not records:
             st.warning("还没有面试记录。请先完成至少几轮模拟面试。")
         else:
-            incomplete = is_interview_incomplete(records)
-            report_profile = dict(profile)
-            report_profile["role_mismatch_warning"] = st.session_state.role_mismatch_warning
-            report_profile["role_mismatch_detail"] = st.session_state.role_mismatch_detail
-            report_profile["resume_optimization_suggestions"] = st.session_state.resume_optimization_suggestions
-            report_profile["is_incomplete_interview"] = incomplete
-            report_profile["incomplete_report_warning"] = INCOMPLETE_REPORT_WARNING if incomplete else ""
-            st.session_state.final_report = build_final_report(records, report_profile)
-            st.session_state.report_json = json.dumps(st.session_state.final_report, ensure_ascii=False, indent=2)
-            st.session_state.report_markdown = report_to_markdown(st.session_state.final_report)
+            generate_and_store_final_report(records, profile)
             st.success("正式评分报告已生成。")
-            autosave_current_session(status="completed")
 
     report = st.session_state.final_report
+    if report:
+        patched_report = ensure_report_auxiliary_sections_safe(report, records, profile)
+        if patched_report != report:
+            st.session_state.final_report = patched_report
+            st.session_state.report_json = json.dumps(patched_report, ensure_ascii=False, indent=2)
+            st.session_state.report_markdown = report_to_markdown(patched_report)
+            report = patched_report
 
     if report:
-        st.markdown("### 总体结果")
+        st.markdown("### 本次面试概览")
         if report.get("is_incomplete_interview"):
             st.warning(report.get("incomplete_report_warning") or INCOMPLETE_REPORT_WARNING)
         if report.get("report_text_polished_by_llm"):
             st.caption("已使用 LLM 优化文字反馈表达，评分和维度分仍由本地规则计算。")
-        col_a, col_b, col_c, col_d, col_e = st.columns(5)
-        col_a.metric("总分", f"{report['total_score']} / 100")
-        col_b.metric("等级", report["level"])
-        col_c.metric("目标岗位", report.get("target_role") or "未明确")
-        col_d.metric("难度", report.get("difficulty") or "未明确")
-        col_e.metric("回答数量", report["interview_summary"]["answer_count"])
+        render_report_overview(report)
 
         st.markdown("### 五维度能力雷达图")
         render_radar_chart(report.get("dimension_details", {}))
         st.caption("雷达图用于页面展示，JSON 和 Markdown 下载仍保留结构化评分数据。")
+
+        render_distribution_section(report)
+        render_stability_and_ability(report)
 
         st.markdown("### 维度得分详情")
         dim_cols = st.columns(5)
@@ -2206,6 +2616,8 @@ with tab4:
         else:
             st.write("本次未发现明显简历与岗位方向冲突，建议继续强化与目标岗位相关的项目表达。")
 
+        render_weak_point_cards(report)
+
         st.markdown("### 错题与薄弱知识点总结")
         for item in report.get("weak_points_summary", []):
             st.write(f"- {item}")
@@ -2220,6 +2632,20 @@ with tab4:
 
         json_text = st.session_state.report_json or json.dumps(report, ensure_ascii=False, indent=2)
         md_text = st.session_state.report_markdown or report_to_markdown(report)
+        records_text = json.dumps(records, ensure_ascii=False, sort_keys=True)
+        png_error = ""
+        full_png_bytes = b""
+        poster_png_bytes = b""
+        try:
+            full_png_bytes = cached_full_report_png(json_text, records_text, REPORT_IMAGE_EXPORT_VERSION)
+            poster_png_bytes = cached_summary_poster_png(json_text, records_text, REPORT_IMAGE_EXPORT_VERSION)
+        except Exception as exc:
+            png_error = str(exc)
+        font_warning = get_font_warning()
+        if font_warning:
+            st.warning(font_warning)
+        if png_error:
+            st.warning(f"PNG 导出暂不可用：{png_error}")
 
         col_json, col_md = st.columns(2)
         with col_json:
@@ -2227,14 +2653,35 @@ with tab4:
                 "下载评分报告 JSON",
                 data=json_text,
                 file_name=f"final_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                mime="application/json"
+                mime="application/json",
+                type="primary"
             )
         with col_md:
             st.download_button(
                 "下载评分报告 Markdown",
                 data=md_text,
                 file_name=f"final_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
-                mime="text/markdown"
+                mime="text/markdown",
+                type="primary"
+            )
+        col_full_png, col_poster_png = st.columns(2)
+        with col_full_png:
+            st.download_button(
+                "导出完整报告长图 PNG",
+                data=full_png_bytes,
+                file_name=f"full_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
+                mime="image/png",
+                disabled=not bool(full_png_bytes),
+                type="primary"
+            )
+        with col_poster_png:
+            st.download_button(
+                "导出报告摘要海报 PNG",
+                data=poster_png_bytes,
+                file_name=f"summary_poster_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
+                mime="image/png",
+                disabled=not bool(poster_png_bytes),
+                type="primary"
             )
     else:
         summary = summarize_interview_records(records)

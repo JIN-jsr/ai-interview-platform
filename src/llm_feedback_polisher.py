@@ -5,6 +5,8 @@ from src.llm_client import call_chat, extract_json_from_text, is_llm_enabled
 
 
 LOCAL_FALLBACK_NOTE = "LLM 暂时不可用，已使用本地规则生成反馈内容。"
+DEFAULT_FEEDBACK_TIMEOUT_SECONDS = 120
+GROWTH_CURVE_TIMEOUT_SECONDS = 120
 
 
 def _clean_list(value: Any, limit: int = 6) -> List[str]:
@@ -15,7 +17,7 @@ def _clean_list(value: Any, limit: int = 6) -> List[str]:
     return [str(item).strip() for item in value if str(item).strip()][:limit]
 
 
-def _safe_json_chat(payload: Dict[str, Any], task: str, timeout: int = 35) -> Dict[str, Any]:
+def _safe_json_chat(payload: Dict[str, Any], task: str, timeout: int = DEFAULT_FEEDBACK_TIMEOUT_SECONDS) -> Dict[str, Any]:
     if not is_llm_enabled():
         raise RuntimeError("disabled")
     messages = [
@@ -80,7 +82,7 @@ def polish_growth_curve_with_llm(
         data = _safe_json_chat(
             payload,
             "请基于所选报告润色能力成长曲线的总结、维度变化分析和后续建议。要求中文、具体、简洁，不过度鼓励。",
-            timeout=120,
+            timeout=GROWTH_CURVE_TIMEOUT_SECONDS,
         )
         summary = str(data.get("growth_summary", "")).strip()
         if not summary:
@@ -199,6 +201,10 @@ def polish_final_report_text_with_llm(report: Dict[str, Any], profile: Dict[str,
         "weak_points_summary": polished_report.get("weak_points_summary", []),
         "detected_skills": (profile or {}).get("detected_skills", [])[:16],
         "knowledge_ids": (polished_report.get("interview_summary", {}) or {}).get("knowledge_ids", []),
+        "question_distribution": polished_report.get("question_distribution", {}),
+        "answer_stability": polished_report.get("answer_stability", {}),
+        "role_ability_coverage": polished_report.get("role_ability_coverage", {}),
+        "weak_point_cards": polished_report.get("weak_point_cards", []),
         "role_mismatch_warning": polished_report.get("role_mismatch_warning", ""),
         "rule_based_strengths": polished_report.get("strengths", []),
         "rule_based_main_problems": polished_report.get("main_problems", []),
@@ -212,6 +218,15 @@ def polish_final_report_text_with_llm(report: Dict[str, Any], profile: Dict[str,
             "weak_points_summary": ["..."],
             "learning_recommendations": ["..."],
             "resume_optimization_suggestions": ["..."],
+            "question_distribution_summary": "...",
+            "answer_stability_summary": "...",
+            "role_ability_summary": "...",
+            "covered_abilities": ["..."],
+            "missing_or_weak_abilities": ["..."],
+            "weak_point_cards": [
+                {"title": "...", "evidence": "...", "suggestion": "..."}
+            ],
+            "role_aware_resume_advice": ["..."],
         },
     }
     try:
@@ -231,6 +246,44 @@ def polish_final_report_text_with_llm(report: Dict[str, Any], profile: Dict[str,
             cleaned = _clean_list(data.get(key, []), limit=limit)
             if cleaned:
                 polished_report[key] = cleaned
+        role_advice = _clean_list(data.get("role_aware_resume_advice", []), limit=6)
+        if role_advice:
+            polished_report["resume_optimization_suggestions"] = role_advice
+        if data.get("question_distribution_summary") and polished_report.get("question_distribution"):
+            polished_report["question_distribution"]["summary"] = str(data.get("question_distribution_summary")).strip()
+            polished_report["question_distribution"]["polished_by_llm"] = True
+        if data.get("answer_stability_summary") and polished_report.get("answer_stability"):
+            polished_report["answer_stability"]["summary"] = str(data.get("answer_stability_summary")).strip()
+            polished_report["answer_stability"]["polished_by_llm"] = True
+        if data.get("role_ability_summary") and polished_report.get("role_ability_coverage"):
+            polished_report["role_ability_coverage"]["summary"] = str(data.get("role_ability_summary")).strip()
+            polished_report["role_ability_coverage"]["polished_by_llm"] = True
+        if polished_report.get("role_ability_coverage"):
+            covered = _clean_list(data.get("covered_abilities", []), limit=10)
+            weak = _clean_list(data.get("missing_or_weak_abilities", []), limit=8)
+            if covered:
+                polished_report["role_ability_coverage"]["covered_abilities"] = covered
+                polished_report["role_ability_coverage"]["polished_by_llm"] = True
+            if weak:
+                polished_report["role_ability_coverage"]["missing_or_weak_abilities"] = weak
+                polished_report["role_ability_coverage"]["polished_by_llm"] = True
+        cards = data.get("weak_point_cards", [])
+        if isinstance(cards, list):
+            cleaned_cards = []
+            for card in cards[:6]:
+                if not isinstance(card, dict):
+                    continue
+                cleaned_cards.append({
+                    "title": str(card.get("title", "")).strip(),
+                    "evidence": str(card.get("evidence", "")).strip(),
+                    "suggestion": str(card.get("suggestion", "")).strip(),
+                })
+            cleaned_cards = [
+                card for card in cleaned_cards
+                if card["title"] or card["evidence"] or card["suggestion"]
+            ]
+            if cleaned_cards:
+                polished_report["weak_point_cards"] = cleaned_cards
         polished_report["report_text_polished_by_llm"] = True
         polished_report["report_text_polish_fallback_reason"] = ""
         return polished_report

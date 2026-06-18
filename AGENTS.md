@@ -6,7 +6,7 @@
 
 
 
-AI Mock Interview and Ability Improvement Platform
+AI 模拟面试与能力提升平台
 
 
 
