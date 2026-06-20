@@ -1177,19 +1177,18 @@ def render_self_check_page():
         "docs/demo_script.md",
         "docs/test_checklist.md",
         "docs/final_submission_checklist.md",
+        "docs/assets/README.md",
         "demo/sample_resume_ai_app.txt",
         "demo/sample_resume_backend.txt",
         "demo/sample_resume_frontend.txt",
         "demo/sample_resume_data_analysis.txt",
         "demo/sample_resume_testing.txt",
-        "demo/demo_answers.md",
         "demo/README.md",
         "demo/sample_answers_ai_app.md",
         "demo/sample_answers_backend.md",
         "demo/sample_answers_data_analysis.md",
         "demo/sample_answers_frontend.md",
         "demo/sample_answers_testing.md",
-        "demo/demo_walkthrough.md",
         "start_app.bat",
         "scripts/self_check.py",
     ]
@@ -1236,9 +1235,8 @@ def render_self_check_page():
     st.write("- 演示视频脚本：`docs/demo_script.md`")
     st.write("- 测试清单：`docs/test_checklist.md`")
     st.write("- 最终提交清单：`docs/final_submission_checklist.md`")
-    st.write("- 演示流程：`demo/demo_walkthrough.md`")
     st.write("- 演示数据说明：`demo/README.md`")
-    st.write("- 通用示例回答：`demo/demo_answers.md`")
+    st.write("- 文档图片资源说明：`docs/assets/README.md`")
 
 
     st.markdown("### 最终提交建议")

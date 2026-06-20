@@ -15,3 +15,5 @@ outputs/report_images/*
 !outputs/reports/.gitkeep
 !outputs/report_images/.gitkeep
 *.png
+!docs/assets/
+!docs/assets/*.png
