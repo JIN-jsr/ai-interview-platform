@@ -77,15 +77,13 @@ ai_interview_platform_day1/
 ├─ README.md
 ├─ .env.example
 ├─ data/
-│  ├─ knowledge_base.json
-│  └─ sample_resume.txt
+│  └─ knowledge_base.json
 ├─ demo/
 │  ├─ sample_resume_ai_app.txt
 │  ├─ sample_resume_backend.txt
 │  ├─ sample_resume_frontend.txt
 │  ├─ sample_resume_data_analysis.txt
 │  ├─ sample_resume_testing.txt
-│  ├─ demo_answers.md
 │  ├─ sample_answers_backend.md
 │  ├─ sample_answers_frontend.md
 │  ├─ sample_answers_ai_app.md
@@ -110,8 +108,6 @@ ai_interview_platform_day1/
 ├─ scripts/
 │  └─ self_check.py
 ├─ docs/
-│  ├─ PROJECT_CONTEXT.md
-│  ├─ OPTIMIZATION_PLAN.md
 │  └─ Project_Design_Document.md
 └─ outputs/
    ├─ sessions/
