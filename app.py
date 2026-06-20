@@ -1162,7 +1162,6 @@ def render_self_check_page():
         ".gitignore",
         ".env.example",
         "data/knowledge_base.json",
-        "data/sample_resume.txt",
         "src/llm_client.py",
         "src/resume_parser.py",
         "src/rag_retriever.py",
