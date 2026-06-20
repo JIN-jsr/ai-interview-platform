@@ -28,11 +28,8 @@ REQUIRED_FILES = [
 ]
 
 OPTIONAL_FILES = [
-    "docs/PROJECT_CONTEXT.md",
-    "docs/OPTIMIZATION_PLAN.md",
     "docs/final_submission_checklist.md",
     "docs/demo_script.md",
-    "demo/demo_answers.md",
     "demo/README.md",
 ]
 
@@ -70,7 +67,6 @@ DEMO_RESUMES = {
 }
 
 DEMO_ANSWER_FILES = [
-    "demo/demo_answers.md",
     "demo/sample_answers_ai_app.md",
     "demo/sample_answers_backend.md",
     "demo/sample_answers_data_analysis.md",
