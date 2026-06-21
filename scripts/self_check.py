@@ -77,6 +77,7 @@ EXPECTED_ASSETS = [
     "docs/assets/resume_analysis_03_role_match.png",
     "docs/assets/rag_evidence.png",
     "docs/assets/interview_workspace.png",
+    "docs/assets/answer_analysis_export.png",
     "docs/assets/final_report_dashboard.png",
     "docs/assets/ability_growth_curve.png",
     "docs/assets/report_full_long.png",
@@ -422,6 +423,41 @@ def check_scoring_weights(reporter: Reporter) -> None:
         reporter.warn_msg("评分置信度枚举值不完整。")
 
 
+def check_answer_analysis_contract(reporter: Reporter) -> None:
+    try:
+        from src.answer_analyzer import analyze_answer, summarize_interview_records
+    except Exception as exc:
+        reporter.error_msg(f"无法导入回答分析模块：{exc}")
+        return
+
+    meta = {
+        "question": "如何用 EXPLAIN 分析 MySQL 慢查询？",
+        "type": "rag_basic",
+        "expected_points": ["慢查询日志与 SQL 定位", "EXPLAIN 关键字段", "索引和扫描行数判断", "优化后验证"],
+        "misconceptions": ["只要使用索引，查询就一定快"],
+    }
+    answer = "我会先看慢查询日志定位 SQL，再用 EXPLAIN 看 type、key、rows 和 Extra，判断索引和扫描行数，优化后对比耗时。"
+    try:
+        analysis = analyze_answer(meta, answer)
+        json.dumps(analysis, ensure_ascii=False)
+    except Exception as exc:
+        reporter.error_msg(f"回答分析结果不可 JSON 序列化：{exc}")
+        return
+
+    required_keys = {"covered_points", "missing_points", "coverage_ratio", "problems", "suggestions", "needs_followup"}
+    missing = sorted(required_keys - set(analysis.keys()))
+    if missing:
+        reporter.error_msg(f"回答分析缺少关键字段：{missing}")
+    else:
+        reporter.ok_msg("回答分析字段结构可用于即时反馈和最终报告。")
+
+    old_record_summary = summarize_interview_records([{"question": "旧记录", "user_answer": "旧回答"}])
+    if old_record_summary.get("total_answers") == 1:
+        reporter.ok_msg("旧历史记录缺少 analysis 字段时可安全汇总。")
+    else:
+        reporter.error_msg("旧历史记录缺少 analysis 字段时汇总异常。")
+
+
 def check_demo_package(reporter: Reporter) -> None:
     demo_dir = ROOT / "demo"
     if not demo_dir.is_dir():
@@ -472,6 +508,22 @@ def check_assets(reporter: Reporter) -> None:
                 reporter.ok_msg(f"图片可读取：{rel}，{width} x {height}")
         except Exception as exc:
             reporter.error_msg(f"图片无法读取：{rel}，{exc}")
+
+    feedback_asset = "docs/assets/answer_analysis_export.png"
+    ignored = is_ignored(feedback_asset)
+    if ignored is True:
+        reporter.error_msg(f"答后即时分析合并截图被 .gitignore 忽略：{feedback_asset}")
+    elif ignored is False:
+        reporter.ok_msg(f"答后即时分析合并截图可被 Git 跟踪：{feedback_asset}")
+    else:
+        reporter.warn_msg(f"无法确认答后即时分析合并截图 Git 状态：{feedback_asset}")
+
+    reference_sources = ["README.md", "docs/Project_Design_Document.md", "docs/assets/README.md"]
+    referenced_by = [rel for rel in reference_sources if "answer_analysis_export.png" in read_text_safe(rel)]
+    if referenced_by:
+        reporter.ok_msg("答后即时分析合并截图已被文档引用：" + "、".join(referenced_by))
+    else:
+        reporter.error_msg("答后即时分析合并截图未被 README 或设计文档引用。")
 
 
 def check_final_pdf(reporter: Reporter) -> None:
@@ -682,19 +734,69 @@ def check_markdown_links(reporter: Reporter) -> None:
 
 def check_stale_references(reporter: Reporter) -> None:
     hits = []
+    negative_markers = ("不存在", "旧", "失效引用", "未引用", "remove", "obsolete")
     for path in iter_project_text_files():
         rel = path.relative_to(ROOT).as_posix()
         if rel == "scripts/self_check.py":
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
         for pattern in STALE_PATTERNS:
-            if pattern in text:
+            for line in text.splitlines():
+                if pattern not in line:
+                    continue
+                if pattern == "answer_analysis.png" and any(marker in line for marker in negative_markers):
+                    continue
                 hits.append((rel, pattern))
+                break
     if hits:
         for rel, pattern in hits[:10]:
             reporter.warn_msg(f"发现可能过期引用：{rel} -> {pattern}")
     else:
         reporter.ok_msg("未发现已删除文件或旧版本说明的明显引用。")
+
+
+def check_documentation_consistency(reporter: Reporter) -> None:
+    docs = {
+        "README.md": read_text_safe("README.md"),
+        "docs/Project_Design_Document.md": read_text_safe("docs/Project_Design_Document.md"),
+        "docs/demo_script.md": read_text_safe("docs/demo_script.md"),
+        "docs/test_checklist.md": read_text_safe("docs/test_checklist.md"),
+        "docs/final_submission_checklist.md": read_text_safe("docs/final_submission_checklist.md"),
+    }
+    combined = "\n".join(docs.values())
+
+    required_phrases = [
+        "单题训练反馈",
+        "完整面试结束后",
+        "只优化反馈文字表达",
+        "不修改覆盖率",
+        "不包含完整参考答案",
+        "answer_analysis_export.png",
+    ]
+    for phrase in required_phrases:
+        if phrase in combined:
+            reporter.ok_msg(f"文档边界说明存在：{phrase}")
+        else:
+            reporter.warn_msg(f"文档建议补充边界说明：{phrase}")
+
+    forbidden_claims = [
+        "LLM 直接评分",
+        "LLM 计算分数",
+        "导出完整参考答案",
+        "逐题得分",
+        "本题得分",
+    ]
+    hits = [claim for claim in forbidden_claims if claim in combined]
+    if hits:
+        reporter.warn_msg("文档中存在可能误导的表述，请人工确认：" + "、".join(hits))
+    else:
+        reporter.ok_msg("文档未发现 LLM 改分或导出完整参考答案的误导表述。")
+
+    active_old_image = re.search(r"!\[[^\]]*\]\([^)]*answer_analysis\.png\)", combined)
+    if active_old_image:
+        reporter.error_msg("文档仍存在旧截图 answer_analysis.png 的活跃图片引用。")
+    else:
+        reporter.ok_msg("文档未发现旧截图 answer_analysis.png 的活跃图片引用。")
 
 
 def check_secret_like_text(reporter: Reporter) -> None:
@@ -744,6 +846,7 @@ def main() -> int:
     check_knowledge_base(reporter)
     check_role_capability_dictionaries(reporter)
     check_scoring_weights(reporter)
+    check_answer_analysis_contract(reporter)
     check_demo_package(reporter)
     check_assets(reporter)
     check_final_pdf(reporter)
@@ -753,6 +856,7 @@ def main() -> int:
     check_imports(reporter)
     check_markdown_links(reporter)
     check_stale_references(reporter)
+    check_documentation_consistency(reporter)
     check_secret_like_text(reporter)
     print_summary(reporter)
     return 0 if reporter.error == 0 else 1

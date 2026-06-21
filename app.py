@@ -2,6 +2,8 @@ import json
 import math
 import importlib
 import html
+import hashlib
+import base64
 from datetime import datetime
 import streamlit.components.v1 as components
 
@@ -13,7 +15,12 @@ from src.interviewer import get_next_question, prepare_rag_items_for_interview
 from pathlib import Path
 
 from src.llm_client import get_llm_config, get_masked_api_key, is_llm_enabled, test_llm_connection
-from src.llm_feedback_polisher import polish_growth_curve_with_llm, polish_role_mismatch_with_llm
+from src.llm_feedback_polisher import (
+    polish_answer_feedback_with_llm,
+    polish_growth_curve_with_llm,
+    polish_interview_answer_summary_with_llm,
+    polish_role_mismatch_with_llm,
+)
 from src.profile_generator import generate_profile_from_parsed_resume
 from src.product_features import (
     analyze_growth_reports,
@@ -111,6 +118,32 @@ def inject_refined_bw_styles():
             background: #1f2937 !important;
             color: var(--ui-white) !important;
             border-color: #1f2937 !important;
+        }
+        .instant-feedback-download-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            min-height: 52px;
+            border-radius: 15px;
+            border: 1px solid var(--ui-border-strong);
+            background: var(--ui-white);
+            color: var(--ui-black) !important;
+            font-family: inherit !important;
+            font-size: 15px !important;
+            font-weight: 650 !important;
+            text-decoration: none !important;
+            box-shadow: none;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0 18px;
+            line-height: 1.2 !important;
+        }
+        .instant-feedback-download-link:hover {
+            background: var(--ui-soft);
+            color: var(--ui-black) !important;
+            border-color: var(--ui-black);
+            text-decoration: none !important;
         }
         .home-hero {
             min-height: auto !important;
@@ -247,6 +280,38 @@ def inject_refined_bw_styles():
             color: #374151;
             font-size: 16px;
             line-height: 1.8;
+        }
+        .answer-feedback-card {
+            background: #f8fafc;
+            border: 1px solid var(--ui-border);
+            border-left: 4px solid #4b5563;
+            border-radius: 14px;
+            padding: 16px 18px;
+            margin: 12px 0 16px;
+            box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+        }
+        .answer-feedback-title {
+            color: var(--ui-black);
+            font-size: 17px;
+            font-weight: 760;
+            margin-bottom: 8px;
+        }
+        .answer-feedback-status {
+            display: inline-block;
+            color: var(--ui-black);
+            background: #eef2f7;
+            border: 1px solid #d8dee8;
+            border-radius: 999px;
+            padding: 4px 11px;
+            font-size: 14px;
+            font-weight: 680;
+            margin-bottom: 8px;
+        }
+        .answer-feedback-text {
+            color: #374151;
+            font-size: 15px;
+            line-height: 1.75;
+            margin: 4px 0 0;
         }
         .process-flow {
             display: flex;
@@ -401,6 +466,14 @@ if "current_question_meta" not in st.session_state:
     st.session_state.current_question_meta = None
 if "interview_records" not in st.session_state:
     st.session_state.interview_records = []
+if "show_immediate_answer_feedback" not in st.session_state:
+    st.session_state.show_immediate_answer_feedback = True
+if "use_llm_answer_feedback" not in st.session_state:
+    st.session_state.use_llm_answer_feedback = True
+if "overall_answer_feedback" not in st.session_state:
+    st.session_state.overall_answer_feedback = None
+if "overall_answer_feedback_key" not in st.session_state:
+    st.session_state.overall_answer_feedback_key = ""
 if "followup_count" not in st.session_state:
     st.session_state.followup_count = 0
 if "final_report" not in st.session_state:
@@ -528,12 +601,16 @@ def reset_interview_state():
     st.session_state.used_knowledge_ids = []
     st.session_state.used_categories = []
     st.session_state.edit_latest_answer_text = ""
+    st.session_state.overall_answer_feedback = None
+    st.session_state.overall_answer_feedback_key = ""
 
 
 def clear_report_state():
     st.session_state.final_report = None
     st.session_state.report_markdown = ""
     st.session_state.report_json = ""
+    st.session_state.overall_answer_feedback = None
+    st.session_state.overall_answer_feedback_key = ""
 
 
 def reset_all_state():
@@ -721,6 +798,10 @@ def build_session_payload(status=None):
         "question_meta": st.session_state.question_meta,
         "current_question_meta": st.session_state.current_question_meta,
         "interview_records": st.session_state.interview_records,
+        "show_immediate_answer_feedback": st.session_state.show_immediate_answer_feedback,
+        "use_llm_answer_feedback": st.session_state.use_llm_answer_feedback,
+        "overall_answer_feedback": st.session_state.overall_answer_feedback,
+        "overall_answer_feedback_key": st.session_state.overall_answer_feedback_key,
         "followup_count": st.session_state.followup_count,
         "used_knowledge_ids": st.session_state.used_knowledge_ids,
         "used_categories": st.session_state.used_categories,
@@ -759,6 +840,10 @@ def restore_session_state(session_data):
     st.session_state.question_meta = session_data.get("question_meta", [])
     st.session_state.current_question_meta = session_data.get("current_question_meta")
     st.session_state.interview_records = session_data.get("interview_records", [])
+    st.session_state.show_immediate_answer_feedback = bool(session_data.get("show_immediate_answer_feedback", True))
+    st.session_state.use_llm_answer_feedback = bool(session_data.get("use_llm_answer_feedback", True))
+    st.session_state.overall_answer_feedback = session_data.get("overall_answer_feedback")
+    st.session_state.overall_answer_feedback_key = session_data.get("overall_answer_feedback_key", "")
     st.session_state.followup_count = session_data.get("followup_count", 0)
     st.session_state.used_knowledge_ids = session_data.get("used_knowledge_ids", [])
     st.session_state.used_categories = session_data.get("used_categories", [])
@@ -897,7 +982,7 @@ def render_intro_page():
             "本系统是面向计算机相关专业学生和求职者的简历驱动模拟面试与能力提升平台，"
             "用于面试准备、学习训练和项目表达复盘。"
         )
-        st.code("简历输入与解析 -> 候选人画像与岗位匹配 -> RAG 知识检索 -> LLM 动态提问或规则 fallback -> 连续面试与项目追问 -> 回答分析 -> 五维度评分 -> 历史记录与能力成长复盘", language="text")
+        st.code("简历输入与解析 -> 候选人画像与岗位匹配 -> RAG 知识检索 -> LLM 动态提问或规则 fallback -> 用户回答 -> 即时回答分析 -> 连续面试与项目追问 -> 五维度评分 -> 历史记录与能力成长复盘", language="text")
         col_a, col_b = st.columns(2)
         with col_a:
             st.markdown("### 核心能力")
@@ -905,6 +990,7 @@ def render_intro_page():
             st.write("- 岗位画像和面试重点生成")
             st.write("- RAG 知识库检索与岗位导向选题")
             st.write("- LLM 动态出题与上下文连续追问")
+            st.write("- 即时训练反馈：每次提交回答后展示亮点、主要遗漏和改进方向")
             st.write("- 回答覆盖度分析、五维评分和成长复盘")
         with col_b:
             st.markdown("### 技术特点")
@@ -939,6 +1025,8 @@ def render_intro_page():
             <span>→</span>
             <span class="process-step">LLM / fallback 提问</span>
             <span>→</span>
+            <span class="process-step">即时回答分析</span>
+            <span>→</span>
             <span class="process-step">项目追问</span>
             <span>→</span>
             <span class="process-step">五维评分与成长复盘</span>
@@ -959,6 +1047,7 @@ def render_intro_page():
                 <li>候选人画像与岗位匹配分析</li>
                 <li>RAG 知识库检索与岗位导向选题</li>
                 <li>LLM 动态出题与上下文连续追问</li>
+                <li>即时训练反馈：每次提交回答后展示亮点、主要遗漏和改进方向</li>
                 <li>回答分析、评分报告和能力成长复盘</li>
               </ul>
             </div>
@@ -1013,10 +1102,10 @@ def render_realtime_status(target_role, difficulty, current_status, assistant_co
         info_cols[0].metric("当前岗位", target_role)
         info_cols[1].metric("面试难度", difficulty)
         info_cols[2].metric("当前状态", current_status)
-        info_cols[3].metric("已回答题数", len(st.session_state.interview_records))
+        info_cols[3].metric("已回答题数", f"{len(st.session_state.interview_records)} / {get_display_question_total()}")
         info_cols[4].metric("报告状态", "已生成" if st.session_state.final_report else "未生成")
         detail_cols = st.columns(4)
-        detail_cols[0].write(f"**当前轮次：** {assistant_count}")
+        detail_cols[0].write(f"**当前轮次：** {get_display_round_count()}")
         detail_cols[1].write(f"**上下文追问：** {st.session_state.followup_count}")
         detail_cols[2].write(f"**已用知识点：** {len(st.session_state.used_knowledge_ids)}")
         detail_cols[3].write(f"**RAG 条目：** {kb_stats['total_entries']}")
@@ -1389,7 +1478,8 @@ def start_demo_session(target_role, difficulty, sample_key):
 
 def render_floating_status_panel(target_role, difficulty, current_status, assistant_count, kb_stats):
     answered_count = len(st.session_state.interview_records)
-    expected_count = EXPECTED_INTERVIEW_QUESTION_COUNT
+    expected_count = get_display_question_total()
+    round_count = get_display_round_count()
     report_status = "已生成" if st.session_state.final_report else "未生成"
     trigger = "实时面试状态"
     with st.popover(trigger, use_container_width=False):
@@ -1402,7 +1492,7 @@ def render_floating_status_panel(target_role, difficulty, current_status, assist
             ("当前状态", current_status),
             ("已回答题数", f"{answered_count} / {expected_count}"),
             ("报告状态", report_status),
-            ("当前轮次", assistant_count),
+            ("当前轮次", round_count),
         ]
         for idx, (label, value) in enumerate(core_items):
             with core_cols[idx % 2]:
@@ -1417,7 +1507,7 @@ def render_floating_status_panel(target_role, difficulty, current_status, assist
                 )
 
         st.markdown("##### 进度")
-        progress = min(1.0, answered_count / expected_count)
+        progress = min(1.0, answered_count / max(1, expected_count))
         st.progress(progress)
         progress_cols = st.columns(2)
         progress_items = [
@@ -1660,7 +1750,7 @@ def jump_to_report_tab_once():
 def build_interview_record(question_meta, user_answer, analysis):
     question_meta = attach_rag_display_fields(question_meta, st.session_state.selected_target_role)
     generated_by = question_meta.get("generated_by", "rule_fallback")
-    return {
+    record = {
         "question": question_meta.get("question", ""),
         "question_type": question_meta.get("type", "unknown"),
         "knowledge_id": question_meta.get("knowledge_id", ""),
@@ -1678,9 +1768,10 @@ def build_interview_record(question_meta, user_answer, analysis):
         "used_knowledge_ids": list(st.session_state.used_knowledge_ids),
         "used_categories": list(st.session_state.used_categories),
         "user_answer": user_answer,
-        "analysis": analysis,
+        "analysis": analysis or {},
         "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
+    return enrich_answer_record_with_feedback(record)
 
 
 def build_report_profile(records, profile):
@@ -1881,6 +1972,25 @@ def is_current_interview_ended():
     return False
 
 
+def get_real_question_count():
+    return len([
+        meta for meta in st.session_state.question_meta or []
+        if (meta or {}).get("type") != "end"
+    ])
+
+
+def get_display_question_total():
+    return max(
+        EXPECTED_INTERVIEW_QUESTION_COUNT,
+        len(st.session_state.interview_records or []),
+        get_real_question_count(),
+    )
+
+
+def get_display_round_count():
+    return max(len(st.session_state.interview_records or []), get_real_question_count())
+
+
 def question_type_display_name(question_type):
     labels = {
         "intro": "自我介绍",
@@ -1933,6 +2043,296 @@ def render_report_list_cards(groups):
             "</div>"
         )
     st.markdown(f'<div class="report-list-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
+
+
+def _first_nonempty(items, fallback="暂无"):
+    clean = [str(item).strip() for item in (items or []) if str(item).strip()]
+    return clean or [fallback]
+
+
+def qualitative_answer_status(analysis):
+    ratio = float((analysis or {}).get("coverage_ratio", 0) or 0)
+    critical = (analysis or {}).get("matched_critical_errors", []) or []
+    misconceptions = (analysis or {}).get("matched_misconceptions", []) or []
+    answer_length = int((analysis or {}).get("answer_length", 0) or 0)
+    if critical or ratio < 0.25 or answer_length < 30:
+        return "建议重新组织回答"
+    if misconceptions or ratio < 0.45:
+        return "存在明显遗漏"
+    if ratio < 0.75:
+        return "基本到位，仍可补充"
+    return "覆盖较完整"
+
+
+def build_rule_answer_feedback_summary(record):
+    analysis = (record or {}).get("analysis") or {}
+    if not analysis:
+        return {
+            "status": "该历史回答暂无逐题分析",
+            "highlights": ["旧记录未保存逐题分析，不影响继续查看面试记录。"],
+            "missing": ["暂无可展示的逐题缺失项。"],
+            "suggestion": "可以在后续题目中继续补充背景、做法、验证结果和边界条件。",
+            "source": "rule_based",
+            "llm_note": "",
+            "fallback_reason": "",
+        }
+
+    covered = _first_nonempty(analysis.get("covered_points", [])[:3], "已提交有效回答，系统已保存本题分析。")
+    missing = _first_nonempty(
+        (analysis.get("matched_critical_errors", []) or [])
+        + (analysis.get("matched_misconceptions", []) or [])
+        + (analysis.get("missing_points", []) or [])[:3],
+        "本题暂未发现明显缺失，可继续补充项目证据或验证方式。",
+    )
+    suggestions = _first_nonempty(analysis.get("suggestions", [])[:2], "可以按“结论—依据—项目例子—验证结果”的顺序再压实表达。")
+    return {
+        "status": qualitative_answer_status(analysis),
+        "highlights": covered[:3],
+        "missing": missing[:3],
+        "suggestion": suggestions[0],
+        "source": "rule_based",
+        "llm_note": "",
+        "fallback_reason": "",
+    }
+
+
+def build_immediate_feedback_summary(record):
+    saved = (record or {}).get("immediate_feedback")
+    if isinstance(saved, dict) and saved.get("status"):
+        return {
+            "status": str(saved.get("status", "")),
+            "highlights": _first_nonempty(saved.get("highlights", [])),
+            "missing": _first_nonempty(saved.get("missing", [])),
+            "suggestion": str(saved.get("suggestion", "") or "可以继续补充更具体的项目证据和验证方式。"),
+            "source": str(saved.get("source", "rule_based")),
+            "llm_note": str(saved.get("llm_note", "")),
+            "fallback_reason": str(saved.get("fallback_reason", "")),
+        }
+    return build_rule_answer_feedback_summary(record)
+
+
+def should_use_llm_answer_feedback():
+    return bool(st.session_state.get("use_llm_answer_feedback", True) and is_llm_enabled())
+
+
+def enrich_answer_record_with_feedback(record):
+    local_summary = build_rule_answer_feedback_summary(record)
+    if should_use_llm_answer_feedback():
+        record["immediate_feedback"] = polish_answer_feedback_with_llm(record, local_summary)
+    else:
+        record["immediate_feedback"] = local_summary
+        if st.session_state.get("use_llm_answer_feedback", True) and not is_llm_enabled():
+            record["immediate_feedback"]["fallback_reason"] = "LLM 未启用或配置不完整，已使用本地规则反馈。"
+    return record
+
+
+def render_immediate_answer_feedback(record, key_suffix=""):
+    if not st.session_state.get("show_immediate_answer_feedback", True):
+        return
+
+    summary = build_immediate_feedback_summary(record)
+    analysis = (record or {}).get("analysis") or {}
+    st.markdown(
+        '<div class="answer-feedback-card">'
+        '<div class="answer-feedback-title">本题回答分析</div>'
+        f'<div class="answer-feedback-status">{_esc(summary["status"])}</div>'
+        f'<div class="answer-feedback-text"><strong>回答亮点：</strong>{"；".join(_esc(item) for item in summary["highlights"])}</div>'
+        f'<div class="answer-feedback-text"><strong>建议补充：</strong>{"；".join(_esc(item) for item in summary["missing"])}</div>'
+        f'<div class="answer-feedback-text"><strong>一条改进建议：</strong>{_esc(summary["suggestion"])}</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    if summary.get("source") == "llm":
+        st.caption(summary.get("llm_note") or "已使用 LLM 辅助润色本题反馈。")
+    elif summary.get("fallback_reason"):
+        st.caption(summary.get("fallback_reason"))
+
+    with st.expander("查看详细分析", expanded=False):
+        if not analysis:
+            st.info("该历史回答暂无逐题分析。")
+            return
+        detail_rows = [
+            ("已覆盖要点", analysis.get("covered_points", []) or ["暂无明显覆盖"]),
+            ("主要缺失", analysis.get("missing_points", []) or ["暂无明显缺失"]),
+            ("风险表述", (analysis.get("matched_misconceptions", []) or []) + (analysis.get("matched_critical_errors", []) or []) or ["暂无明显风险表述"]),
+            ("逻辑与完整性提示", analysis.get("problems", []) or ["暂无明显结构性问题"]),
+            ("分析来源", [summary.get("llm_note") or "本地规则分析，用于单题训练反馈，不直接等同于最终五维评分。"]),
+        ]
+        for title, items in detail_rows:
+            st.markdown(f"**{title}：**")
+            for item in _first_nonempty(items):
+                st.write(f"- {item}")
+        if record.get("display_topic") or record.get("display_category"):
+            st.caption(f"相关主题：{record.get('display_topic') or record.get('display_category')}")
+
+
+def answer_records_feedback_key(records):
+    compact = []
+    for record in records or []:
+        analysis = (record or {}).get("analysis") or {}
+        compact.append({
+            "question": (record or {}).get("question", ""),
+            "answer": (record or {}).get("user_answer", ""),
+            "coverage_ratio": analysis.get("coverage_ratio", 0),
+            "missing_points": analysis.get("missing_points", []),
+            "problems": analysis.get("problems", []),
+            "llm_enabled": should_use_llm_answer_feedback(),
+        })
+    text = json.dumps(compact, ensure_ascii=False, sort_keys=True)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def build_rule_overall_answer_feedback(summary):
+    frequent_keywords = summary.get("frequent_keywords", []) or []
+    common_problems = summary.get("common_problems", []) or []
+    keyword_text = [
+        f"{item[0]}（{item[1]}次）" if isinstance(item, (list, tuple)) and len(item) >= 2 else str(item)
+        for item in frequent_keywords[:5]
+    ]
+    problem_text = [
+        f"{item[0]}（{item[1]}次）" if isinstance(item, (list, tuple)) and len(item) >= 2 else str(item)
+        for item in common_problems[:5]
+    ]
+    total_answers = summary.get("total_answers", 0)
+    average_score = summary.get("average_temp_score", 0)
+    return {
+        "summary": f"本轮已回答 {total_answers} 题，单题训练反馈均已保存，平均临时表现约为 {average_score}/10，仅用于过程复盘。",
+        "strengths": keyword_text or ["已完成有效作答，可继续通过逐题反馈复盘。"],
+        "main_gaps": problem_text or ["暂无明显高频问题，建议继续补充项目证据和验证方式。"],
+        "recommendations": ["优先复盘低覆盖题目，将答案补成“结论—依据—项目例子—验证结果”。"],
+        "source": "rule_based",
+        "llm_note": "本地规则生成总体回答分析，最终评分仍在评分报告中统一计算。",
+        "fallback_reason": "",
+    }
+
+
+def get_overall_answer_feedback(records, summary, profile):
+    if not records:
+        return None
+    key = answer_records_feedback_key(records)
+    cached = st.session_state.get("overall_answer_feedback")
+    if cached and st.session_state.get("overall_answer_feedback_key") == key:
+        return cached
+
+    local_feedback = build_rule_overall_answer_feedback(summary)
+    if should_use_llm_answer_feedback():
+        feedback = polish_interview_answer_summary_with_llm(records, summary, profile)
+        for key_name, fallback_value in local_feedback.items():
+            if not feedback.get(key_name):
+                feedback[key_name] = fallback_value
+    else:
+        feedback = local_feedback
+        if st.session_state.get("use_llm_answer_feedback", True) and not is_llm_enabled():
+            feedback["fallback_reason"] = "LLM 未启用或配置不完整，已使用本地规则生成总体回答分析。"
+
+    st.session_state.overall_answer_feedback = feedback
+    st.session_state.overall_answer_feedback_key = key
+    return feedback
+
+
+def render_overall_answer_feedback(feedback):
+    if not feedback:
+        return
+    st.markdown("### 总体回答分析")
+    render_report_summary(feedback.get("summary") or "暂无总体回答分析。")
+    render_report_list_cards([
+        ("总体亮点", feedback.get("strengths", []) or ["暂无明显亮点"]),
+        ("主要短板", feedback.get("main_gaps", []) or ["暂无明显短板"]),
+        ("后续建议", feedback.get("recommendations", []) or ["继续完成完整面试并复盘逐题反馈。"]),
+    ])
+    if feedback.get("source") == "llm":
+        st.caption(feedback.get("llm_note") or "已使用 LLM 辅助润色总体回答分析。")
+    elif feedback.get("fallback_reason"):
+        st.caption(feedback.get("fallback_reason"))
+
+
+def _markdown_list(items):
+    clean_items = [str(item).strip() for item in (items or []) if str(item).strip()]
+    if not clean_items:
+        clean_items = ["暂无"]
+    return "\n".join(f"- {item}" for item in clean_items)
+
+
+def build_instant_feedback_review_markdown(records, profile=None):
+    profile = profile or {}
+    lines = [
+        "# 即时回答分析复盘",
+        "",
+        f"导出时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        f"目标岗位：{profile.get('target_role') or st.session_state.selected_target_role or '未明确'}",
+        f"面试难度：{profile.get('difficulty') or st.session_state.selected_difficulty or '未明确'}",
+        f"回答数量：{len(records or [])}",
+        "",
+        "> 本文件用于训练复盘，包含每题问题、用户回答和即时回答分析。最终五维评分仍以正式评分报告为准。",
+        "",
+    ]
+    for idx, record in enumerate(records or [], start=1):
+        analysis = (record or {}).get("analysis") or {}
+        feedback = build_immediate_feedback_summary(record)
+        risks = (analysis.get("matched_misconceptions", []) or []) + (analysis.get("matched_critical_errors", []) or [])
+        lines.extend([
+            f"## 第 {idx} 题",
+            "",
+            f"题型：{question_type_display_name(record.get('question_type'))}",
+            f"相关主题：{record.get('display_topic') or record.get('display_category') or '暂无'}",
+            f"生成方式：{record.get('generated_by') or 'unknown'}",
+            "",
+            "### 问题",
+            "",
+            str(record.get("question", "") or "暂无"),
+            "",
+            "### 我的回答",
+            "",
+            str(record.get("user_answer", "") or "暂无"),
+            "",
+            "### 本题回答分析",
+            "",
+            f"总体提示：{feedback.get('status') or '暂无'}",
+            "",
+            "回答亮点：",
+            _markdown_list(feedback.get("highlights", [])),
+            "",
+            "建议补充：",
+            _markdown_list(feedback.get("missing", [])),
+            "",
+            f"一条改进建议：{feedback.get('suggestion') or '暂无'}",
+            "",
+            "### 详细分析",
+            "",
+            f"覆盖率：{analysis.get('coverage_ratio', 0)}",
+            "",
+            "已覆盖要点：",
+            _markdown_list(analysis.get("covered_points", [])),
+            "",
+            "主要缺失：",
+            _markdown_list(analysis.get("missing_points", [])),
+            "",
+            "风险表述：",
+            _markdown_list(risks),
+            "",
+            "逻辑与完整性提示：",
+            _markdown_list(analysis.get("problems", [])),
+            "",
+            f"反馈来源：{feedback.get('source') or 'rule_based'}",
+            "",
+            "---",
+            "",
+        ])
+    return "\n".join(lines)
+
+
+def render_instant_feedback_download_link(records, profile=None):
+    markdown_text = build_instant_feedback_review_markdown(records, profile)
+    encoded = base64.b64encode(markdown_text.encode("utf-8")).decode("ascii")
+    file_name = f"instant_answer_feedback_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+    st.markdown(
+        (
+            f'<a class="instant-feedback-download-link" '
+            f'href="data:text/markdown;charset=utf-8;base64,{encoded}" '
+            f'download="{_esc(file_name)}">导出即时分析</a>'
+        ),
+        unsafe_allow_html=True,
+    )
 
 
 def rebuild_question_usage():
@@ -1999,7 +2399,7 @@ def edit_latest_answer_and_regenerate(edited_answer):
     st.session_state.followup_count = answered_meta.get("followup_count", st.session_state.followup_count)
     rebuild_question_usage()
 
-    with st.spinner("正在根据修改后的回答重新生成下一题，请稍候..."):
+    with st.spinner("正在重新分析回答并更新后续内容，请稍候..."):
         analysis = analyze_answer(answered_meta, edited_answer)
         st.session_state.interview_records.append(
             build_interview_record(answered_meta, edited_answer, analysis)
@@ -2038,14 +2438,14 @@ def render_latest_answer_editor(disabled=False, answer_text=None, key_suffix="")
         latest_answer = st.session_state.interview_records[-1].get("user_answer", "")
     with st.expander("修改回答", expanded=False):
         edited_answer = st.text_area(
-            "编辑并重新发送，系统会替换旧回答并重新生成下一题。",
+            "编辑并重新发送，系统会替换旧回答并更新后续内容。",
             value=latest_answer or "",
             height=150,
             key=f"edit_latest_answer_text_{key_suffix}",
             disabled=disabled,
         )
         if disabled:
-            st.info("当前正在生成下一题，请稍候。")
+            st.info("当前正在分析回答并更新面试状态，请稍候。")
         elif st.button("重新发送", key=f"resend_latest_answer_{key_suffix}"):
             if edit_latest_answer_and_regenerate(edited_answer):
                 st.rerun()
@@ -2150,6 +2550,30 @@ with st.sidebar:
 
     st.divider()
     st.subheader("更多功能")
+    previous_feedback_setting = st.session_state.get("show_immediate_answer_feedback", True)
+    st.checkbox(
+        "答后即时分析",
+        key="show_immediate_answer_feedback",
+        help="提交回答后展示简要分析；关闭后仍会在后台保存分析，用于追问和最终报告。",
+    )
+    previous_llm_feedback_setting = st.session_state.get("use_llm_answer_feedback", True)
+    st.checkbox(
+        "LLM 辅助反馈润色",
+        key="use_llm_answer_feedback",
+        help="开启且 USE_LLM=true 时，LLM 只润色每题和总体回答反馈，不修改分数、覆盖率或最终评分权重。",
+    )
+    if (
+        previous_feedback_setting != st.session_state.get("show_immediate_answer_feedback", True)
+        and st.session_state.get("current_session_id")
+    ):
+        autosave_current_session()
+    if (
+        previous_llm_feedback_setting != st.session_state.get("use_llm_answer_feedback", True)
+        and st.session_state.get("current_session_id")
+    ):
+        st.session_state.overall_answer_feedback = None
+        st.session_state.overall_answer_feedback_key = ""
+        autosave_current_session()
     if st.button("RAG知识库", use_container_width=True):
         go_to_page("rag")
     if st.button("项目说明与运行检查", use_container_width=True):
@@ -2453,17 +2877,33 @@ with tab2:
                     meta = st.session_state.question_meta[assistant_meta_index]
                 render_assistant_question_details(meta)
                 if meta and meta.get("type") == "end":
-                    if st.button("查看报告", type="primary", use_container_width=True, key=f"view_report_{assistant_meta_index}"):
-                        st.session_state.jump_to_report_tab_nonce += 1
-                        render_report_tab_jump_script(st.session_state.jump_to_report_tab_nonce)
-                        st.session_state.jump_to_report_tab = False
-                        st.session_state.jump_to_report_tab_processed_nonce = st.session_state.jump_to_report_tab_nonce
+                    export_col, report_col = st.columns(2)
+                    with export_col:
+                        render_instant_feedback_download_link(
+                            st.session_state.interview_records,
+                            st.session_state.profile or {},
+                        )
+                    with report_col:
+                        if st.button("查看报告", type="primary", use_container_width=True, key=f"view_report_{assistant_meta_index}"):
+                            st.session_state.jump_to_report_tab_nonce += 1
+                            render_report_tab_jump_script(st.session_state.jump_to_report_tab_nonce)
+                            st.session_state.jump_to_report_tab = False
+                            st.session_state.jump_to_report_tab_processed_nonce = st.session_state.jump_to_report_tab_nonce
                 assistant_meta_index += 1
             elif (
                 msg["role"] == "user"
                 and msg_idx == latest_user_idx
                 and st.session_state.interview_records
             ):
+                answered_question_count = assistant_count_before(msg_idx)
+                record = None
+                if 0 < answered_question_count <= len(st.session_state.interview_records):
+                    record = st.session_state.interview_records[answered_question_count - 1]
+                if record:
+                    render_immediate_answer_feedback(
+                        record,
+                        key_suffix=f"chat_{answered_question_count}_{len(st.session_state.interview_records)}",
+                    )
                 render_latest_answer_editor(
                     key_suffix=f"inline_{len(st.session_state.interview_records)}"
                 )
@@ -2488,7 +2928,7 @@ with tab2:
             st.markdown('<div id="processing-anchor"></div>', unsafe_allow_html=True)
             scroll_to_latest_message()
 
-            with st.spinner("正在分析你的回答并生成下一题，请稍候..."):
+            with st.spinner("正在分析你的回答并生成即时反馈，请稍候..."):
                 last_meta = st.session_state.current_question_meta or {}
                 analysis = analyze_answer(last_meta, user_answer)
                 st.session_state.interview_records.append(
@@ -2530,12 +2970,12 @@ with tab3:
     records = st.session_state.interview_records
     summary = summarize_interview_records(records)
 
-    st.markdown("### 面试过程摘要")
-    st.json(summary)
-
     if not records:
         st.info("还没有面试回答记录。请先开始模拟面试。")
     else:
+        render_overall_answer_feedback(get_overall_answer_feedback(records, summary, st.session_state.profile or {}))
+        with st.expander("查看结构化过程摘要", expanded=False):
+            st.json(summary)
         for idx, record in enumerate(records, start=1):
             title = f"第 {idx} 题｜{record.get('question_type')}｜回答评分 {record.get('analysis', {}).get('overall_temp_score')}/10"
             if record.get("knowledge_id"):

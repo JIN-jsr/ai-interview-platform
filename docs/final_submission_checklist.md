@@ -10,6 +10,15 @@
 - [ ] `requirements.txt` 可安装。
 - [ ] `python scripts/self_check.py` 无 ERROR。
 - [ ] `python scripts/scoring_calibration_check.py` 通过。
+- [ ] 答后即时分析功能已完整测试。
+- [ ] LLM 辅助反馈润色已在启用和关闭两种状态下测试。
+- [ ] 即时回答分析复盘 Markdown 导出已测试。
+- [ ] 修改重答后分析会同步更新。
+- [ ] 导出文件不包含完整参考答案。
+- [ ] 即时分析与最终评分边界说明清楚。
+- [ ] README 已展示合并后的 `answer_analysis_export.png`。
+- [ ] README 与 Markdown 设计文档已同步。
+- [ ] 仓库不存在旧 `answer_analysis.png` 引用。
 - [ ] `.env` 未提交。
 - [ ] `.venv/` 未提交。
 - [ ] 真实简历未提交。
@@ -22,6 +31,7 @@
 
 - [ ] `docs/Project_Design_Document.md` 已更新。
 - [ ] 仓库内 `docs/Project_Design_Document.pdf` 已复制自桌面最终 PDF。
+- [ ] 正式设计 PDF 已由用户手动更新，本轮未重新生成。
 - [ ] `docs/Project_Design_Document.pdf` 可正常打开。
 - [ ] `docs/Project_Design_Document.pdf` 为用户确认的最终固定排版版本。
 - [ ] `docs/Project_Design_Document.md` 仅作为 GitHub 在线阅读版本。
@@ -37,6 +47,7 @@
 - [ ] 文档不包含真实 API Key 或私人数据。
 - [ ] PDF 元数据不包含私人路径或密钥。
 - [ ] 最终提交格式以官方赛题文件和通知为准。
+- [ ] 正式 PDF 已在人工修改后重新导出。
 
 ## 3. 演示视频
 
@@ -47,6 +58,8 @@
 - [ ] 展示 RAG 出题依据。
 - [ ] 展示 LLM 出题或 fallback 出题。
 - [ ] 展示回答分析和修改重交。
+- [ ] 演示视频展示一次即时分析。
+- [ ] 演示视频展示即时分析与逐题导出。
 - [ ] 展示五维度评分报告。
 - [ ] 展示 Markdown / JSON / PNG 导出。
 - [ ] 展示能力成长曲线。

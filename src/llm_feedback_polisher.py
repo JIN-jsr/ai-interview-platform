@@ -7,6 +7,7 @@ from src.llm_client import call_chat, extract_json_from_text, is_llm_enabled
 LOCAL_FALLBACK_NOTE = "LLM 暂时不可用，已使用本地规则生成反馈内容。"
 DEFAULT_FEEDBACK_TIMEOUT_SECONDS = 120
 GROWTH_CURVE_TIMEOUT_SECONDS = 120
+ANSWER_FEEDBACK_TIMEOUT_SECONDS = 60
 
 
 def _clean_list(value: Any, limit: int = 6) -> List[str]:
@@ -15,6 +16,27 @@ def _clean_list(value: Any, limit: int = 6) -> List[str]:
     if not isinstance(value, list):
         return []
     return [str(item).strip() for item in value if str(item).strip()][:limit]
+
+
+def _compact_answer_record(record: Dict[str, Any]) -> Dict[str, Any]:
+    analysis = (record or {}).get("analysis") or {}
+    return {
+        "question": str((record or {}).get("question", ""))[:300],
+        "question_type": (record or {}).get("question_type", ""),
+        "display_topic": (record or {}).get("display_topic", ""),
+        "display_category": (record or {}).get("display_category", ""),
+        "expected_points": _clean_list((record or {}).get("expected_points", []), limit=8),
+        "user_answer": str((record or {}).get("user_answer", ""))[:900],
+        "analysis": {
+            "coverage_ratio": analysis.get("coverage_ratio", 0),
+            "covered_points": _clean_list(analysis.get("covered_points", []), limit=6),
+            "missing_points": _clean_list(analysis.get("missing_points", []), limit=6),
+            "problems": _clean_list(analysis.get("problems", []), limit=5),
+            "suggestions": _clean_list(analysis.get("suggestions", []), limit=5),
+            "matched_misconceptions": _clean_list(analysis.get("matched_misconceptions", []), limit=4),
+            "matched_critical_errors": _clean_list(analysis.get("matched_critical_errors", []), limit=4),
+        },
+    }
 
 
 def _safe_json_chat(payload: Dict[str, Any], task: str, timeout: int = DEFAULT_FEEDBACK_TIMEOUT_SECONDS) -> Dict[str, Any]:
@@ -39,6 +61,121 @@ def _safe_json_chat(payload: Dict[str, Any], task: str, timeout: int = DEFAULT_F
     if not isinstance(data, dict):
         raise ValueError("invalid_json")
     return data
+
+
+def polish_answer_feedback_with_llm(
+    record: Dict[str, Any],
+    local_summary: Dict[str, Any],
+) -> Dict[str, Any]:
+    fallback = {
+        "status": str((local_summary or {}).get("status", "")).strip() or "基本到位，仍可补充",
+        "highlights": _clean_list((local_summary or {}).get("highlights", []), limit=3),
+        "missing": _clean_list((local_summary or {}).get("missing", []), limit=3),
+        "suggestion": str((local_summary or {}).get("suggestion", "")).strip(),
+        "source": "rule_based",
+        "llm_note": LOCAL_FALLBACK_NOTE,
+        "fallback_reason": "disabled" if not is_llm_enabled() else "",
+    }
+    if not is_llm_enabled():
+        return fallback
+
+    payload = {
+        "answer_record": _compact_answer_record(record),
+        "local_feedback": fallback,
+        "required_output": {
+            "status": "覆盖较完整 / 基本到位，仍可补充 / 存在明显遗漏 / 建议重新组织回答",
+            "highlights": ["亮点1", "亮点2"],
+            "missing": ["最重要缺失1", "最重要缺失2"],
+            "suggestion": "一条可执行改进建议",
+        },
+    }
+    try:
+        data = _safe_json_chat(
+            payload,
+            (
+                "请基于本地分析结果润色单题答后即时反馈。要求中文、简洁、可执行。"
+                "不得展示完整参考答案，不得编造事实，不得输出分数，不得改变覆盖率或评分。"
+            ),
+            timeout=ANSWER_FEEDBACK_TIMEOUT_SECONDS,
+        )
+        status = str(data.get("status", "")).strip()
+        if status not in {"覆盖较完整", "基本到位，仍可补充", "存在明显遗漏", "建议重新组织回答"}:
+            status = fallback["status"]
+        suggestion = str(data.get("suggestion", "")).strip() or fallback["suggestion"]
+        return {
+            "status": status,
+            "highlights": _clean_list(data.get("highlights", []), limit=3) or fallback["highlights"],
+            "missing": _clean_list(data.get("missing", []), limit=3) or fallback["missing"],
+            "suggestion": suggestion,
+            "source": "llm",
+            "llm_note": "已使用 LLM 辅助润色本题反馈，评分依据仍来自本地规则。",
+            "fallback_reason": "",
+        }
+    except Exception as exc:
+        fallback["fallback_reason"] = str(exc)
+        fallback["llm_note"] = f"{LOCAL_FALLBACK_NOTE}原因：{exc}"
+        return fallback
+
+
+def polish_interview_answer_summary_with_llm(
+    records: List[Dict[str, Any]],
+    rule_summary: Dict[str, Any],
+    profile: Dict[str, Any],
+) -> Dict[str, Any]:
+    fallback = {
+        "summary": "本轮回答分析已基于本地规则生成，可结合逐题反馈继续复盘。",
+        "strengths": [],
+        "main_gaps": _clean_list((rule_summary or {}).get("common_problems", []), limit=5),
+        "recommendations": ["优先复盘低覆盖题目，补充项目例子、验证方式和边界条件。"],
+        "source": "rule_based",
+        "llm_note": LOCAL_FALLBACK_NOTE,
+        "fallback_reason": "disabled" if not is_llm_enabled() else "",
+    }
+    if not is_llm_enabled():
+        return fallback
+
+    compact_records = []
+    for record in records or []:
+        item = _compact_answer_record(record)
+        item.pop("user_answer", None)
+        compact_records.append(item)
+    payload = {
+        "target_role": (profile or {}).get("target_role", ""),
+        "difficulty": (profile or {}).get("difficulty", ""),
+        "rule_summary": rule_summary or {},
+        "answer_records": compact_records[:10],
+        "required_output": {
+            "summary": "一段总体回答表现总结",
+            "strengths": ["总体亮点1", "总体亮点2"],
+            "main_gaps": ["主要短板1", "主要短板2"],
+            "recommendations": ["后续训练建议1", "后续训练建议2"],
+        },
+    }
+    try:
+        data = _safe_json_chat(
+            payload,
+            (
+                "请基于本地逐题分析润色总体回答分析。要求中文、具体、克制。"
+                "不得修改最终分数、不得生成招聘结论、不得输出完整参考答案。"
+            ),
+            timeout=ANSWER_FEEDBACK_TIMEOUT_SECONDS,
+        )
+        summary = str(data.get("summary", "")).strip()
+        if not summary:
+            raise ValueError("empty_summary")
+        return {
+            "summary": summary,
+            "strengths": _clean_list(data.get("strengths", []), limit=5),
+            "main_gaps": _clean_list(data.get("main_gaps", []), limit=5),
+            "recommendations": _clean_list(data.get("recommendations", []), limit=5),
+            "source": "llm",
+            "llm_note": "已使用 LLM 辅助润色总体回答分析，最终评分仍由本地规则计算。",
+            "fallback_reason": "",
+        }
+    except Exception as exc:
+        fallback["fallback_reason"] = str(exc)
+        fallback["llm_note"] = f"{LOCAL_FALLBACK_NOTE}原因：{exc}"
+        return fallback
 
 
 def _compact_growth_reports(reports: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

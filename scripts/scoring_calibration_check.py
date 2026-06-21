@@ -135,6 +135,19 @@ def main() -> int:
     testing_keywords = extract_keywords("我会用 pytest 做接口测试，准备异常场景，结合日志分析并做回归测试。")
     assert_true("pytest" in testing_keywords and "接口测试" in testing_keywords and "回归测试" in testing_keywords, "software testing vocabulary not recognized")
 
+    weak_analysis = analyze_answer(QUESTION_SET[1], "不知道。")
+    medium_analysis = analyze_answer(QUESTION_SET[1], ANSWERS["medium"][1])
+    strong_analysis = analyze_answer(QUESTION_SET[1], ANSWERS["high"][1])
+    assert_true(
+        strong_analysis["coverage_ratio"] >= medium_analysis["coverage_ratio"] >= weak_analysis["coverage_ratio"],
+        "coverage should improve from weak to medium to strong answers",
+    )
+    assert_true(weak_analysis["suggestions"], "weak answer should receive actionable suggestions")
+    assert_true(strong_analysis["missing_points"] != QUESTION_SET[1]["expected_points"], "strong answer should not miss every expected point")
+    empty_analysis = analyze_answer(QUESTION_SET[1], "")
+    assert_true(empty_analysis["answer_length"] == 0 and empty_analysis["coverage_ratio"] == 0, "empty answer analysis should be conservative")
+    assert_true("reference_answer" not in strong_analysis, "analysis result should not expose a full reference answer")
+
     print("Calibration scores:")
     print(f"  low={low}")
     print(f"  medium={medium}")
