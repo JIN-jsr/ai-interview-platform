@@ -4,6 +4,9 @@ from src.answer_analyzer import extract_keywords
 from src.llm_interviewer import generate_llm_question
 from src.rag_retriever import retrieve_by_profile, retrieve_by_query
 
+MIN_PROJECT_DEEP_DIVE_FOR_COMPLETE = 2
+MIN_CONTEXTUAL_FOLLOWUP_FOR_COMPLETE = 1
+
 
 def get_selected_difficulty(profile: Dict[str, Any], fallback: str = "中等") -> str:
     return str(profile.get("difficulty") or fallback)
@@ -231,7 +234,10 @@ def _get_rule_based_question(
     followup_count: int = 0,
     max_followups: int = 3,
     used_knowledge_ids: Optional[List[str]] = None,
-    used_categories: Optional[List[str]] = None
+    used_categories: Optional[List[str]] = None,
+    asked_project_count: int = 0,
+    asked_followup_count: int = 0,
+    target_question_count: int = 8
 ) -> Dict[str, Any]:
     """Return next interview question with context-aware follow-up.
 
@@ -239,6 +245,7 @@ def _get_rule_based_question(
     """
     assistant_count = len([m for m in history if m.get("role") == "assistant"])
     difficulty = get_selected_difficulty(profile)
+    has_project_context = bool(profile.get("project_names") or profile.get("candidate_profile") or profile.get("interview_focus"))
 
     if assistant_count == 0:
         return {
@@ -265,6 +272,34 @@ def _get_rule_based_question(
                 follow["rag_index"] = rag_index
                 follow["followup_count"] = followup_count + 1
                 return follow
+
+    remaining_slots = max(0, target_question_count - assistant_count)
+    if (
+        has_project_context
+        and assistant_count >= max(4, target_question_count - 2)
+        and asked_project_count < MIN_PROJECT_DEEP_DIVE_FOR_COMPLETE
+        and remaining_slots > 0
+    ):
+        return {
+            "question": build_project_question(profile, asked_project_count + 1),
+            "type": "project",
+            "rag_index": rag_index,
+            "followup_count": followup_count,
+            "coverage_repair_reason": "项目深挖题数量不足，系统优先补齐项目证据。"
+        }
+
+    if (
+        assistant_count >= max(5, target_question_count - 2)
+        and asked_followup_count < MIN_CONTEXTUAL_FOLLOWUP_FOR_COMPLETE
+        and last_question_meta
+        and last_answer
+    ):
+        follow = build_project_followup(last_answer, profile) or build_rag_followup(last_question_meta, last_analysis or {})
+        if follow:
+            follow["rag_index"] = rag_index
+            follow["followup_count"] = followup_count + 1
+            follow["coverage_repair_reason"] = "上下文追问题数量不足，系统优先补齐追问证据。"
+            return follow
 
     # Main staged flow
     if assistant_count in [1, 2]:
@@ -439,7 +474,10 @@ def get_next_question(
     followup_count: int = 0,
     max_followups: int = 3,
     used_knowledge_ids: Optional[List[str]] = None,
-    used_categories: Optional[List[str]] = None
+    used_categories: Optional[List[str]] = None,
+    asked_project_count: int = 0,
+    asked_followup_count: int = 0,
+    target_question_count: int = 8
 ) -> Dict[str, Any]:
     """Return the next question, using LLM+RAG first and rule logic as fallback."""
     fallback = _get_rule_based_question(
@@ -453,7 +491,10 @@ def get_next_question(
         followup_count=followup_count,
         max_followups=max_followups,
         used_knowledge_ids=used_knowledge_ids,
-        used_categories=used_categories
+        used_categories=used_categories,
+        asked_project_count=asked_project_count,
+        asked_followup_count=asked_followup_count,
+        target_question_count=target_question_count
     )
     fallback = _normalize_question_meta(fallback, generated_by="rule_fallback", profile=profile)
 

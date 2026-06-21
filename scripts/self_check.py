@@ -17,6 +17,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 REQUIRED_FILES = [
     "app.py",
@@ -27,7 +29,9 @@ REQUIRED_FILES = [
     "start_app.bat",
     "data/knowledge_base.json",
     "docs/Project_Design_Document.md",
+    "docs/Project_Design_Document.pdf",
     "docs/assets/README.md",
+    "docs/rag_coverage_audit.md",
 ]
 
 OPTIONAL_FILES = [
@@ -78,7 +82,19 @@ EXPECTED_ASSETS = [
     "docs/assets/report_full_long.png",
     "docs/assets/report_summary_poster.png",
     "docs/assets/system_architecture.png",
+    "docs/assets/sidebar_navigation_01.png",
+    "docs/assets/sidebar_navigation_02.png",
 ]
+
+EXPECTED_WEIGHTS = {
+    "基础知识掌握程度": 0.25,
+    "项目理解深度": 0.25,
+    "回答逻辑性": 0.20,
+    "表达完整性": 0.15,
+    "岗位匹配度": 0.15,
+}
+
+TARGET_ROLES = ["后端开发", "前端开发", "AI应用开发", "数据分析", "软件测试"]
 
 DEMO_RESUMES = {
     "后端开发": "demo/sample_resume_backend.txt",
@@ -138,6 +154,15 @@ STALE_PATTERNS = [
     "fallback debug",
     "raw metadata",
     "raw json",
+    "sidebar_navigation.png",
+    "workspace_navigation_composite.png",
+    "resume_analysis_flow.png",
+    "Project_Design_Document.docx",
+    "DOCX 作为正式排版",
+    "DOCX/PDF 元数据",
+    ".venv\\S cripts",
+    ".venv\\a ctivate",
+    "Scripts\\a ctivate",
 ]
 
 SECRET_PATTERNS = [
@@ -315,6 +340,87 @@ def check_knowledge_base(reporter: Reporter) -> None:
     else:
         reporter.warn_msg("知识库没有明显分类字段。")
 
+    ids = [str(item.get("id", "")).strip() for item in items if isinstance(item, dict)]
+    duplicate_ids = [item_id for item_id, count in __import__("collections").Counter(ids).items() if item_id and count > 1]
+    if duplicate_ids:
+        reporter.error_msg(f"知识库存在重复 ID：{duplicate_ids[:10]}")
+    else:
+        reporter.ok_msg("知识库 ID 未发现重复。")
+
+    empty_expected = [item.get("id", "unknown") for item in items if not item.get("expected_points")]
+    if empty_expected:
+        reporter.warn_msg(f"存在 expected_points 为空的知识点：{empty_expected[:10]}")
+    else:
+        reporter.ok_msg("知识库 expected_points 均非空。")
+
+    optional_list_fields = [
+        "common_mistakes",
+        "misconceptions",
+        "critical_errors",
+        "negative_signals",
+        "evidence_requirements",
+        "verification_questions",
+    ]
+    malformed_meta = []
+    meta_count = 0
+    project_like = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        blob = json.dumps(item, ensure_ascii=False)
+        if "项目" in blob or item.get("question_type") == "project":
+            project_like += 1
+        if any(item.get(field) for field in optional_list_fields):
+            meta_count += 1
+        for field in optional_list_fields:
+            if field in item and item.get(field) not in (None, "") and not isinstance(item.get(field), list):
+                malformed_meta.append((item.get("id", "unknown"), field))
+    if malformed_meta:
+        reporter.error_msg(f"知识库可选误区/证据字段类型异常：{malformed_meta[:10]}")
+    else:
+        reporter.ok_msg(f"误区/关键错误等可选元数据类型正常，覆盖条目数：{meta_count}")
+    if project_like:
+        reporter.ok_msg(f"知识库包含项目深挖相关条目：{project_like}")
+    else:
+        reporter.warn_msg("知识库未发现项目深挖相关条目。")
+
+
+def check_role_capability_dictionaries(reporter: Reporter) -> None:
+    try:
+        from src.product_features import ROLE_KEYWORDS
+    except Exception as exc:
+        reporter.error_msg(f"无法读取岗位能力词库：{exc}")
+        return
+    for role in TARGET_ROLES:
+        values = ROLE_KEYWORDS.get(role, [])
+        if not values:
+            reporter.error_msg(f"岗位能力词库为空：{role}")
+        elif role == "软件测试" and len(values) < 25:
+            reporter.warn_msg(f"软件测试岗位词库偏少：{len(values)}")
+        else:
+            reporter.ok_msg(f"岗位能力词库可用：{role}，关键词 {len(values)} 个")
+
+
+def check_scoring_weights(reporter: Reporter) -> None:
+    try:
+        from src.evaluator import VALID_CONFIDENCE_VALUES, WEIGHTS
+    except Exception as exc:
+        reporter.error_msg(f"无法导入评分模块：{exc}")
+        return
+    if WEIGHTS == EXPECTED_WEIGHTS:
+        reporter.ok_msg("五维评分权重保持不变。")
+    else:
+        reporter.error_msg(f"五维评分权重被修改：{WEIGHTS}")
+    total = round(sum(WEIGHTS.values()), 6)
+    if total == 1:
+        reporter.ok_msg("五维评分权重总和为 1。")
+    else:
+        reporter.error_msg(f"五维评分权重总和异常：{total}")
+    if {"high", "medium", "low"}.issubset(set(VALID_CONFIDENCE_VALUES)):
+        reporter.ok_msg("评分置信度枚举值可用：high/medium/low。")
+    else:
+        reporter.warn_msg("评分置信度枚举值不完整。")
+
 
 def check_demo_package(reporter: Reporter) -> None:
     demo_dir = ROOT / "demo"
@@ -366,6 +472,54 @@ def check_assets(reporter: Reporter) -> None:
                 reporter.ok_msg(f"图片可读取：{rel}，{width} x {height}")
         except Exception as exc:
             reporter.error_msg(f"图片无法读取：{rel}，{exc}")
+
+
+def check_final_pdf(reporter: Reporter) -> None:
+    pdf_path = ROOT / "docs" / "Project_Design_Document.pdf"
+    if not pdf_path.exists():
+        reporter.error_msg("缺少正式 PDF：docs/Project_Design_Document.pdf")
+        return
+
+    try:
+        header = pdf_path.read_bytes()[:4]
+    except Exception as exc:
+        reporter.error_msg(f"正式 PDF 无法读取：{exc}")
+        return
+
+    if header == b"%PDF":
+        reporter.ok_msg("正式 PDF 文件头有效：docs/Project_Design_Document.pdf")
+    else:
+        reporter.error_msg("正式 PDF 文件头不是 %PDF，请重新从桌面最终版复制。")
+        return
+
+    size = pdf_path.stat().st_size
+    if size > 100_000:
+        reporter.ok_msg(f"正式 PDF 文件大小正常：{size} bytes")
+    else:
+        reporter.warn_msg(f"正式 PDF 文件偏小，请人工确认：{size} bytes")
+
+    try:
+        import pdfplumber
+    except Exception as exc:
+        reporter.warn_msg(f"无法导入 pdfplumber，跳过页数校验：{exc}")
+        return
+
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            page_count = len(pdf.pages)
+            if page_count == 12:
+                reporter.ok_msg("正式 PDF 页数符合最终版：12 页。")
+            else:
+                reporter.warn_msg(f"正式 PDF 页数为 {page_count} 页，请确认是否为最终版。")
+            if pdf.pages:
+                width = round(float(pdf.pages[0].width), 1)
+                height = round(float(pdf.pages[0].height), 1)
+                if 590 <= width <= 600 and 835 <= height <= 850:
+                    reporter.ok_msg(f"正式 PDF 页面尺寸接近 A4：{width} x {height}")
+                else:
+                    reporter.warn_msg(f"正式 PDF 首页尺寸不是常见 A4：{width} x {height}")
+    except Exception as exc:
+        reporter.error_msg(f"正式 PDF 无法由 pdfplumber 打开：{exc}")
 
 
 def parse_gitignore_patterns() -> set[str]:
@@ -588,8 +742,11 @@ def main() -> int:
     check_python_version(reporter)
     check_python_compile(reporter)
     check_knowledge_base(reporter)
+    check_role_capability_dictionaries(reporter)
+    check_scoring_weights(reporter)
     check_demo_package(reporter)
     check_assets(reporter)
+    check_final_pdf(reporter)
     check_gitignore_and_security(reporter)
     check_output_dirs(reporter)
     check_git_tracked_outputs(reporter)

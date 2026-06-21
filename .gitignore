@@ -4,6 +4,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .streamlit/secrets.toml
+
 outputs/logs/*
 outputs/reports/
 outputs/reports/*

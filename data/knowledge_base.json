@@ -1293,6 +1293,22 @@
       "后端接口开发",
       "课程项目或实习项目中的技术选型",
       "线上问题排查与优化"
+    ],
+    "common_mistakes": [
+      "只要使用索引，查询就一定快",
+      "EXPLAIN 的 rows 就是真实扫描行数",
+      "只看 key 和 rows 就足够"
+    ],
+    "misconceptions": [
+      "只要使用索引，查询就一定快",
+      "EXPLAIN 的 rows 就是真实扫描行数",
+      "只看 key 和 rows 就足够"
+    ],
+    "critical_errors": [
+      "执行计划完全等同于真实运行结果"
+    ],
+    "evidence_requirements": [
+      "结合真实执行时间验证优化效果"
     ]
   },
   {
@@ -1391,6 +1407,20 @@
       "后端接口开发",
       "课程项目或实习项目中的技术选型",
       "线上问题排查与优化"
+    ],
+    "common_mistakes": [
+      "布隆过滤器能保证零误判",
+      "空值缓存没有内存和一致性代价"
+    ],
+    "misconceptions": [
+      "布隆过滤器能保证零误判",
+      "空值缓存没有内存和一致性代价"
+    ],
+    "critical_errors": [
+      "把缓存穿透和缓存击穿完全混为一谈"
+    ],
+    "evidence_requirements": [
+      "说明命中率、数据库 QPS 或 TTL"
     ]
   },
   {
@@ -2591,6 +2621,22 @@
       "后端接口开发",
       "课程项目或实习项目中的技术选型",
       "线上问题排查与优化"
+    ],
+    "common_mistakes": [
+      "只要加入知识库就不会产生幻觉",
+      "召回数量越多越好",
+      "关键词命中就代表语义正确"
+    ],
+    "misconceptions": [
+      "只要加入知识库就不会产生幻觉",
+      "召回数量越多越好",
+      "关键词命中就代表语义正确"
+    ],
+    "critical_errors": [
+      "检索结果无需验证即可作为事实"
+    ],
+    "evidence_requirements": [
+      "展示引用证据或相关性判断"
     ]
   },
   {
@@ -9801,5 +9847,1433 @@
       "高并发课程项目"
     ],
     "source": "公开课程知识、官方文档与工程实践整理"
+  },
+  {
+    "id": "final_backend_001",
+    "category": "后端开发",
+    "tags": [
+      "RESTful API",
+      "接口安全",
+      "参数校验"
+    ],
+    "difficulty": "medium",
+    "question_type": "scenario",
+    "question": "设计一个用户资料更新接口时，你会如何处理参数校验、权限校验、幂等和错误返回？",
+    "answer": "接口设计需要明确资源语义、请求方法、参数校验、鉴权、幂等策略、错误码和日志追踪。",
+    "expected_points": [
+      "RESTful 资源与方法设计",
+      "参数和权限校验",
+      "幂等与错误返回",
+      "日志与追踪"
+    ],
+    "bad_answer_signals": [
+      "只设计 URL，不考虑鉴权和错误码",
+      "把所有异常都返回 200"
+    ],
+    "common_mistakes": [
+      "只设计 URL，不考虑鉴权和错误码",
+      "把所有异常都返回 200"
+    ],
+    "misconceptions": [
+      "只设计 URL，不考虑鉴权和错误码",
+      "把所有异常都返回 200"
+    ],
+    "critical_errors": [
+      "接口无需权限校验"
+    ],
+    "evidence_requirements": [
+      "说明错误码设计或日志字段"
+    ],
+    "verification_questions": [
+      "如果客户端重复提交，你如何避免重复更新？"
+    ],
+    "follow_up": [
+      "如果客户端重复提交，你如何避免重复更新？"
+    ],
+    "related_project_scenarios": [
+      "用户中心、订单更新、后台管理接口"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_backend_002",
+    "category": "后端开发",
+    "tags": [
+      "MySQL",
+      "索引优化",
+      "EXPLAIN"
+    ],
+    "difficulty": "hard",
+    "question_type": "debugging",
+    "question": "线上接口变慢，怀疑是 MySQL 查询问题，你会如何用慢查询日志和 EXPLAIN 定位？",
+    "answer": "应先确认慢查询 SQL、执行频率和参数分布，再用 EXPLAIN 看访问类型、索引选择、扫描行数和额外操作，最后结合真实执行时间验证优化效果。",
+    "expected_points": [
+      "慢查询日志与 SQL 定位",
+      "EXPLAIN 关键字段",
+      "索引和扫描行数判断",
+      "优化后验证"
+    ],
+    "bad_answer_signals": [
+      "只要使用索引，查询就一定快",
+      "EXPLAIN 的 rows 就是真实扫描行数",
+      "只看 key 和 rows 就足够"
+    ],
+    "common_mistakes": [
+      "只要使用索引，查询就一定快",
+      "EXPLAIN 的 rows 就是真实扫描行数",
+      "只看 key 和 rows 就足够"
+    ],
+    "misconceptions": [
+      "只要使用索引，查询就一定快",
+      "EXPLAIN 的 rows 就是真实扫描行数",
+      "只看 key 和 rows 就足够"
+    ],
+    "critical_errors": [
+      "认为执行计划完全等同于真实运行结果"
+    ],
+    "evidence_requirements": [
+      "给出优化前后耗时或扫描量对比"
+    ],
+    "verification_questions": [
+      "如果加了索引仍然慢，你会继续检查哪些因素？"
+    ],
+    "follow_up": [
+      "如果加了索引仍然慢，你会继续检查哪些因素？"
+    ],
+    "related_project_scenarios": [
+      "后台列表查询、订单检索、数据报表接口"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_backend_003",
+    "category": "后端开发",
+    "tags": [
+      "Redis",
+      "缓存一致性",
+      "缓存穿透"
+    ],
+    "difficulty": "medium",
+    "question_type": "scenario",
+    "question": "接口高峰期大量查询不存在的数据，你会如何判断并处理缓存穿透？",
+    "answer": "可通过监控不存在 key 的请求比例、数据库 QPS 和缓存命中率判断；常见方案包括空值缓存、布隆过滤器、参数校验和限流。",
+    "expected_points": [
+      "缓存穿透现象判断",
+      "空值缓存或布隆过滤器",
+      "数据库压力监控",
+      "一致性和内存代价"
+    ],
+    "bad_answer_signals": [
+      "布隆过滤器能保证零误判",
+      "空值缓存没有内存和一致性成本",
+      "不存在的主键查询必然导致全表扫描"
+    ],
+    "common_mistakes": [
+      "布隆过滤器能保证零误判",
+      "空值缓存没有内存和一致性成本",
+      "不存在的主键查询必然导致全表扫描"
+    ],
+    "misconceptions": [
+      "布隆过滤器能保证零误判",
+      "空值缓存没有内存和一致性成本",
+      "不存在的主键查询必然导致全表扫描"
+    ],
+    "critical_errors": [
+      "把缓存穿透和缓存击穿完全混为一谈"
+    ],
+    "evidence_requirements": [
+      "说明命中率、数据库 QPS 或空值缓存 TTL"
+    ],
+    "verification_questions": [
+      "空值缓存和布隆过滤器各有什么代价？"
+    ],
+    "follow_up": [
+      "空值缓存和布隆过滤器各有什么代价？"
+    ],
+    "related_project_scenarios": [
+      "商品详情、用户信息、订单查询"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_backend_004",
+    "category": "后端开发",
+    "tags": [
+      "消息队列",
+      "Kafka",
+      "RabbitMQ",
+      "异步"
+    ],
+    "difficulty": "medium",
+    "question_type": "tradeoff",
+    "question": "为什么有些业务要引入消息队列？你会如何处理重复消费和消息丢失？",
+    "answer": "消息队列常用于削峰、解耦和异步处理；要结合幂等消费、确认机制、重试、死信队列、日志和补偿任务保证可靠性。",
+    "expected_points": [
+      "削峰解耦和异步处理",
+      "幂等消费",
+      "确认与重试机制",
+      "死信和补偿"
+    ],
+    "bad_answer_signals": [
+      "用了 MQ 就一定不会丢消息",
+      "重复消费只靠消费者重启解决"
+    ],
+    "common_mistakes": [
+      "用了 MQ 就一定不会丢消息",
+      "重复消费只靠消费者重启解决"
+    ],
+    "misconceptions": [
+      "用了 MQ 就一定不会丢消息",
+      "重复消费只靠消费者重启解决"
+    ],
+    "critical_errors": [
+      "消费者无需幂等"
+    ],
+    "evidence_requirements": [
+      "说明至少一个失败补偿机制"
+    ],
+    "verification_questions": [
+      "如何证明消息最终被正确处理？"
+    ],
+    "follow_up": [
+      "如何证明消息最终被正确处理？"
+    ],
+    "related_project_scenarios": [
+      "下单通知、积分发放、异步报表"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_backend_005",
+    "category": "后端开发",
+    "tags": [
+      "高并发",
+      "限流",
+      "熔断",
+      "降级"
+    ],
+    "difficulty": "hard",
+    "question_type": "system_design",
+    "question": "如果一个核心接口在高并发下依赖下游服务，你会如何设计限流、熔断和降级？",
+    "answer": "需要识别核心链路和依赖，设置入口限流、超时、熔断阈值、降级返回和监控告警，并通过压测验证阈值。",
+    "expected_points": [
+      "入口限流",
+      "超时和熔断阈值",
+      "降级策略",
+      "压测和监控验证"
+    ],
+    "bad_answer_signals": [
+      "限流越严格越好",
+      "熔断后不需要恢复策略"
+    ],
+    "common_mistakes": [
+      "限流越严格越好",
+      "熔断后不需要恢复策略"
+    ],
+    "misconceptions": [
+      "限流越严格越好",
+      "熔断后不需要恢复策略"
+    ],
+    "critical_errors": [
+      "降级可以返回错误数据"
+    ],
+    "evidence_requirements": [
+      "说明 QPS、错误率或响应时间阈值"
+    ],
+    "verification_questions": [
+      "如何选择熔断阈值？"
+    ],
+    "follow_up": [
+      "如何选择熔断阈值？"
+    ],
+    "related_project_scenarios": [
+      "秒杀、支付、推荐接口"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_backend_006",
+    "category": "后端开发",
+    "tags": [
+      "部署",
+      "CI/CD",
+      "日志与监控"
+    ],
+    "difficulty": "medium",
+    "question_type": "scenario",
+    "question": "一个后端服务准备上线，你会如何设计发布前验证、日志监控和回滚预案？",
+    "answer": "发布前应执行自动化测试、配置检查、数据库变更确认、灰度或分批发布、核心指标监控和回滚方案。",
+    "expected_points": [
+      "发布前测试",
+      "配置和数据库变更检查",
+      "灰度发布",
+      "监控与回滚"
+    ],
+    "bad_answer_signals": [
+      "上线成功只看服务能启动",
+      "没有回滚方案也可以直接全量发布"
+    ],
+    "common_mistakes": [
+      "上线成功只看服务能启动",
+      "没有回滚方案也可以直接全量发布"
+    ],
+    "misconceptions": [
+      "上线成功只看服务能启动",
+      "没有回滚方案也可以直接全量发布"
+    ],
+    "critical_errors": [
+      "生产环境手动改库不留记录"
+    ],
+    "evidence_requirements": [
+      "列出核心监控指标"
+    ],
+    "verification_questions": [
+      "如何判断发布应该回滚？"
+    ],
+    "follow_up": [
+      "如何判断发布应该回滚？"
+    ],
+    "related_project_scenarios": [
+      "课程项目上线、企业后台服务部署"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_frontend_001",
+    "category": "前端开发",
+    "tags": [
+      "组件化",
+      "状态管理",
+      "Vue",
+      "React"
+    ],
+    "difficulty": "medium",
+    "question_type": "project",
+    "question": "请结合项目说明你如何拆分前端组件，以及哪些状态放在全局、哪些状态留在局部？",
+    "answer": "组件拆分应按业务边界、复用性和职责清晰度设计；全局状态适合跨页面共享，局部状态适合单组件交互。",
+    "expected_points": [
+      "组件职责边界",
+      "全局状态与局部状态区分",
+      "复用性",
+      "项目例子"
+    ],
+    "bad_answer_signals": [
+      "所有状态都放全局",
+      "组件越细越好"
+    ],
+    "common_mistakes": [
+      "所有状态都放全局",
+      "组件越细越好"
+    ],
+    "misconceptions": [
+      "所有状态都放全局",
+      "组件越细越好"
+    ],
+    "critical_errors": [
+      "完全不区分展示组件和业务组件"
+    ],
+    "evidence_requirements": [
+      "说明一个真实组件拆分例子"
+    ],
+    "verification_questions": [
+      "如果状态过多导致维护困难，你会怎么调整？"
+    ],
+    "follow_up": [
+      "如果状态过多导致维护困难，你会怎么调整？"
+    ],
+    "related_project_scenarios": [
+      "后台管理、表单页面、列表筛选"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_frontend_002",
+    "category": "前端开发",
+    "tags": [
+      "跨域",
+      "CORS",
+      "Axios",
+      "Fetch"
+    ],
+    "difficulty": "medium",
+    "question_type": "debugging",
+    "question": "前端请求后端接口出现跨域错误，你会如何定位并解决？",
+    "answer": "应区分浏览器同源策略、预检请求、服务端 CORS 配置、代理转发和鉴权头，不能只在前端关闭校验。",
+    "expected_points": [
+      "同源策略和 CORS",
+      "预检请求",
+      "服务端配置",
+      "开发代理与生产差异"
+    ],
+    "bad_answer_signals": [
+      "跨域是 Axios 的 bug",
+      "前端可以直接关闭浏览器安全策略作为线上方案"
+    ],
+    "common_mistakes": [
+      "跨域是 Axios 的 bug",
+      "前端可以直接关闭浏览器安全策略作为线上方案"
+    ],
+    "misconceptions": [
+      "跨域是 Axios 的 bug",
+      "前端可以直接关闭浏览器安全策略作为线上方案"
+    ],
+    "critical_errors": [
+      "生产环境要求用户关闭安全策略"
+    ],
+    "evidence_requirements": [
+      "说明请求头、响应头或代理配置"
+    ],
+    "verification_questions": [
+      "为什么有些请求会先发 OPTIONS？"
+    ],
+    "follow_up": [
+      "为什么有些请求会先发 OPTIONS？"
+    ],
+    "related_project_scenarios": [
+      "前后端分离项目联调"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_frontend_003",
+    "category": "前端开发",
+    "tags": [
+      "性能优化",
+      "懒加载",
+      "缓存",
+      "Vite",
+      "Webpack"
+    ],
+    "difficulty": "hard",
+    "question_type": "scenario",
+    "question": "首屏加载较慢时，你会从哪些指标和手段分析前端性能？",
+    "answer": "可从资源体积、网络瀑布图、LCP、FCP、代码分包、图片压缩、缓存策略和接口耗时分析，并用工具验证优化效果。",
+    "expected_points": [
+      "性能指标",
+      "资源和网络分析",
+      "代码分包与懒加载",
+      "缓存和验证"
+    ],
+    "bad_answer_signals": [
+      "只要换框架就能解决性能问题",
+      "文件压缩后就不需要监控"
+    ],
+    "common_mistakes": [
+      "只要换框架就能解决性能问题",
+      "文件压缩后就不需要监控"
+    ],
+    "misconceptions": [
+      "只要换框架就能解决性能问题",
+      "文件压缩后就不需要监控"
+    ],
+    "critical_errors": [
+      "不验证优化前后指标"
+    ],
+    "evidence_requirements": [
+      "给出 Lighthouse 或性能面板指标"
+    ],
+    "verification_questions": [
+      "如何判断瓶颈在前端还是接口？"
+    ],
+    "follow_up": [
+      "如何判断瓶颈在前端还是接口？"
+    ],
+    "related_project_scenarios": [
+      "首页、仪表盘、图片较多页面"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_frontend_004",
+    "category": "前端开发",
+    "tags": [
+      "浏览器渲染",
+      "事件循环",
+      "JavaScript"
+    ],
+    "difficulty": "medium",
+    "question_type": "principle",
+    "question": "请说明浏览器事件循环和渲染流程对页面交互卡顿有什么影响？",
+    "answer": "长任务会阻塞主线程，影响事件响应和渲染；需要拆分任务、减少同步计算、合理使用异步和避免频繁重排重绘。",
+    "expected_points": [
+      "主线程和长任务",
+      "事件循环",
+      "重排重绘",
+      "异步和任务拆分"
+    ],
+    "bad_answer_signals": [
+      "异步代码一定不会卡顿",
+      "DOM 操作越多越快"
+    ],
+    "common_mistakes": [
+      "异步代码一定不会卡顿",
+      "DOM 操作越多越快"
+    ],
+    "misconceptions": [
+      "异步代码一定不会卡顿",
+      "DOM 操作越多越快"
+    ],
+    "critical_errors": [
+      "把 setTimeout 当成性能优化万能方案"
+    ],
+    "evidence_requirements": [
+      "说明一个卡顿定位工具"
+    ],
+    "verification_questions": [
+      "如何发现是 JS 长任务导致卡顿？"
+    ],
+    "follow_up": [
+      "如何发现是 JS 长任务导致卡顿？"
+    ],
+    "related_project_scenarios": [
+      "复杂表格、拖拽交互、图表页面"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_frontend_005",
+    "category": "前端开发",
+    "tags": [
+      "前端安全",
+      "XSS",
+      "CSRF"
+    ],
+    "difficulty": "medium",
+    "question_type": "scenario",
+    "question": "如果评论区或富文本页面存在 XSS 风险，你会如何防护？",
+    "answer": "需要输入校验、输出转义、富文本白名单、CSP、Cookie HttpOnly/SameSite，并区分 XSS 与 CSRF 的防护边界。",
+    "expected_points": [
+      "输入输出处理",
+      "富文本白名单",
+      "CSP",
+      "Cookie 安全属性"
+    ],
+    "bad_answer_signals": [
+      "前端框架会自动解决所有 XSS",
+      "只过滤 script 标签就足够"
+    ],
+    "common_mistakes": [
+      "前端框架会自动解决所有 XSS",
+      "只过滤 script 标签就足够"
+    ],
+    "misconceptions": [
+      "前端框架会自动解决所有 XSS",
+      "只过滤 script 标签就足够"
+    ],
+    "critical_errors": [
+      "把用户输入原样 innerHTML 渲染"
+    ],
+    "evidence_requirements": [
+      "说明至少一种实际防护配置"
+    ],
+    "verification_questions": [
+      "XSS 和 CSRF 的防护重点有什么不同？"
+    ],
+    "follow_up": [
+      "XSS 和 CSRF 的防护重点有什么不同？"
+    ],
+    "related_project_scenarios": [
+      "评论、公告、富文本编辑器"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_frontend_006",
+    "category": "前端开发",
+    "tags": [
+      "E2E 测试",
+      "Playwright",
+      "Cypress"
+    ],
+    "difficulty": "medium",
+    "question_type": "scenario",
+    "question": "你会如何为一个登录到下单的前端流程设计 E2E 测试？",
+    "answer": "应覆盖核心路径、异常路径、测试数据准备、接口 Mock 或测试环境、断言点、稳定性和 CI 执行策略。",
+    "expected_points": [
+      "核心用户路径",
+      "异常路径",
+      "测试数据",
+      "断言和 CI"
+    ],
+    "bad_answer_signals": [
+      "E2E 越多越好",
+      "只录制脚本不维护数据"
+    ],
+    "common_mistakes": [
+      "E2E 越多越好",
+      "只录制脚本不维护数据"
+    ],
+    "misconceptions": [
+      "E2E 越多越好",
+      "只录制脚本不维护数据"
+    ],
+    "critical_errors": [
+      "测试通过就代表没有缺陷"
+    ],
+    "evidence_requirements": [
+      "说明断言点和测试数据来源"
+    ],
+    "verification_questions": [
+      "如何降低 E2E 测试不稳定？"
+    ],
+    "follow_up": [
+      "如何降低 E2E 测试不稳定？"
+    ],
+    "related_project_scenarios": [
+      "登录、支付、表单提交流程"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_ai_001",
+    "category": "AI / RAG / LLM 应用",
+    "tags": [
+      "RAG",
+      "检索增强",
+      "幻觉控制"
+    ],
+    "difficulty": "medium",
+    "question_type": "principle",
+    "question": "RAG 能降低幻觉，但为什么不能保证完全没有幻觉？你会如何验证答案是否被知识库支撑？",
+    "answer": "RAG 只提供外部上下文，仍可能召回错误、上下文冲突或生成偏离；需展示引用、检查召回相关性、限制回答边界并做人工或规则验证。",
+    "expected_points": [
+      "RAG 的作用边界",
+      "召回相关性",
+      "引用和证据",
+      "生成约束与验证"
+    ],
+    "bad_answer_signals": [
+      "只要加入知识库就不会产生幻觉",
+      "召回数量越多越好",
+      "检索结果无需人工验证"
+    ],
+    "common_mistakes": [
+      "只要加入知识库就不会产生幻觉",
+      "召回数量越多越好",
+      "检索结果无需人工验证"
+    ],
+    "misconceptions": [
+      "只要加入知识库就不会产生幻觉",
+      "召回数量越多越好",
+      "检索结果无需人工验证"
+    ],
+    "critical_errors": [
+      "关键词命中就代表语义正确"
+    ],
+    "evidence_requirements": [
+      "说明引用证据或相关性评估方法"
+    ],
+    "verification_questions": [
+      "如何发现召回结果其实不相关？"
+    ],
+    "follow_up": [
+      "如何发现召回结果其实不相关？"
+    ],
+    "related_project_scenarios": [
+      "知识问答、面试题生成、客服助手"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_ai_002",
+    "category": "AI / RAG / LLM 应用",
+    "tags": [
+      "结构化输出",
+      "JSON 校验",
+      "fallback"
+    ],
+    "difficulty": "medium",
+    "question_type": "debugging",
+    "question": "LLM 要求输出 JSON，但偶尔返回格式错误，你会如何处理？",
+    "answer": "需要 prompt 约束、JSON 提取、schema 校验、重试、错误日志、默认值和规则 fallback，不能让格式错误中断主流程。",
+    "expected_points": [
+      "Prompt 约束",
+      "JSON 提取和校验",
+      "重试与日志",
+      "fallback"
+    ],
+    "bad_answer_signals": [
+      "要求模型输出 JSON 就一定合法",
+      "解析失败时直接崩溃"
+    ],
+    "common_mistakes": [
+      "要求模型输出 JSON 就一定合法",
+      "解析失败时直接崩溃"
+    ],
+    "misconceptions": [
+      "要求模型输出 JSON 就一定合法",
+      "解析失败时直接崩溃"
+    ],
+    "critical_errors": [
+      "把不合法 JSON 当成可信结构化数据"
+    ],
+    "evidence_requirements": [
+      "说明校验失败后的兜底路径"
+    ],
+    "verification_questions": [
+      "如何避免重试造成用户等待过长？"
+    ],
+    "follow_up": [
+      "如何避免重试造成用户等待过长？"
+    ],
+    "related_project_scenarios": [
+      "简历解析、LLM 出题、报告润色"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_ai_003",
+    "category": "AI / RAG / LLM 应用",
+    "tags": [
+      "Token 成本",
+      "上下文管理",
+      "模型超时"
+    ],
+    "difficulty": "hard",
+    "question_type": "tradeoff",
+    "question": "多轮面试中上下文越来越长，你会如何控制 Token 成本和超时风险？",
+    "answer": "可压缩历史、只保留最近轮次和结构化摘要、限制 RAG Top-K、设置超时、缓存稳定结果，并在失败时启用 fallback。",
+    "expected_points": [
+      "历史压缩",
+      "RAG Top-K 控制",
+      "超时和重试",
+      "缓存与 fallback"
+    ],
+    "bad_answer_signals": [
+      "把所有历史都塞给模型效果最好",
+      "Token 越多越稳定"
+    ],
+    "common_mistakes": [
+      "把所有历史都塞给模型效果最好",
+      "Token 越多越稳定"
+    ],
+    "misconceptions": [
+      "把所有历史都塞给模型效果最好",
+      "Token 越多越稳定"
+    ],
+    "critical_errors": [
+      "没有超时控制也能保证体验"
+    ],
+    "evidence_requirements": [
+      "说明上下文裁剪策略"
+    ],
+    "verification_questions": [
+      "哪些信息必须保留，哪些可以摘要？"
+    ],
+    "follow_up": [
+      "哪些信息必须保留，哪些可以摘要？"
+    ],
+    "related_project_scenarios": [
+      "连续面试、成长分析、长简历解析"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_ai_004",
+    "category": "AI / RAG / LLM 应用",
+    "tags": [
+      "Embedding",
+      "向量检索",
+      "重排序"
+    ],
+    "difficulty": "medium",
+    "question_type": "principle",
+    "question": "如果未来把本地关键词检索升级为向量检索，你会如何评估召回和重排序效果？",
+    "answer": "应准备查询集合和期望知识点，评估 Recall@K、Top-K 相关性、人工抽检、重排序前后变化和错误召回案例。",
+    "expected_points": [
+      "评估数据集",
+      "Recall@K",
+      "Top-K 相关性",
+      "错误召回分析"
+    ],
+    "bad_answer_signals": [
+      "向量检索一定比关键词检索好",
+      "相似度高就一定适合回答"
+    ],
+    "common_mistakes": [
+      "向量检索一定比关键词检索好",
+      "相似度高就一定适合回答"
+    ],
+    "misconceptions": [
+      "向量检索一定比关键词检索好",
+      "相似度高就一定适合回答"
+    ],
+    "critical_errors": [
+      "不做人工抽检直接上线"
+    ],
+    "evidence_requirements": [
+      "说明一个召回评估指标"
+    ],
+    "verification_questions": [
+      "什么时候关键词检索反而更可解释？"
+    ],
+    "follow_up": [
+      "什么时候关键词检索反而更可解释？"
+    ],
+    "related_project_scenarios": [
+      "RAG 知识库升级"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_ai_005",
+    "category": "AI / RAG / LLM 应用",
+    "tags": [
+      "Function Calling",
+      "工具调用",
+      "Agent"
+    ],
+    "difficulty": "hard",
+    "question_type": "scenario",
+    "question": "什么时候适合使用 Function Calling 或 Agent？你会如何控制工具调用风险？",
+    "answer": "适合需要调用外部工具、查询结构化数据或执行多步骤任务的场景；要限制工具权限、校验参数、记录日志、设置失败回退和人工确认边界。",
+    "expected_points": [
+      "适用场景",
+      "参数校验",
+      "权限边界",
+      "日志和失败回退"
+    ],
+    "bad_answer_signals": [
+      "Agent 可以自由执行任何操作",
+      "工具返回结果一定可信"
+    ],
+    "common_mistakes": [
+      "Agent 可以自由执行任何操作",
+      "工具返回结果一定可信"
+    ],
+    "misconceptions": [
+      "Agent 可以自由执行任何操作",
+      "工具返回结果一定可信"
+    ],
+    "critical_errors": [
+      "允许模型直接操作敏感数据"
+    ],
+    "evidence_requirements": [
+      "说明工具权限和审计日志"
+    ],
+    "verification_questions": [
+      "哪些动作必须人工确认？"
+    ],
+    "follow_up": [
+      "哪些动作必须人工确认？"
+    ],
+    "related_project_scenarios": [
+      "自动查资料、生成报告、工作流助手"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_ai_006",
+    "category": "AI / RAG / LLM 应用",
+    "tags": [
+      "API Key 管理",
+      "模型权限",
+      "内容安全"
+    ],
+    "difficulty": "medium",
+    "question_type": "scenario",
+    "question": "一个 LLM 应用准备开源，你会如何处理 API Key、模型权限和用户隐私？",
+    "answer": "应使用 .env 和 .gitignore，提供 .env.example，避免日志和截图泄露密钥，区分模型地域和权限，并避免提交真实用户数据。",
+    "expected_points": [
+      "API Key 不入库",
+      ".env.example",
+      "日志与截图脱敏",
+      "用户数据隐私"
+    ],
+    "bad_answer_signals": [
+      "把 Key 写进代码方便部署",
+      "公开真实会话数据没有风险"
+    ],
+    "common_mistakes": [
+      "把 Key 写进代码方便部署",
+      "公开真实会话数据没有风险"
+    ],
+    "misconceptions": [
+      "把 Key 写进代码方便部署",
+      "公开真实会话数据没有风险"
+    ],
+    "critical_errors": [
+      "在 GitHub 提交真实 API Key"
+    ],
+    "evidence_requirements": [
+      "说明至少两个隐私保护措施"
+    ],
+    "verification_questions": [
+      "如何确认仓库没有泄露密钥？"
+    ],
+    "follow_up": [
+      "如何确认仓库没有泄露密钥？"
+    ],
+    "related_project_scenarios": [
+      "开源项目、比赛提交、演示录屏"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_data_001",
+    "category": "数据分析",
+    "tags": [
+      "指标体系",
+      "业务理解",
+      "报表设计"
+    ],
+    "difficulty": "medium",
+    "question_type": "project",
+    "question": "请结合项目说明一个核心指标是如何定义的，为什么这样定义？",
+    "answer": "指标定义需要说明业务目标、口径、分母分子、时间窗口、过滤条件和使用场景，并避免指标和目标脱节。",
+    "expected_points": [
+      "业务目标",
+      "指标口径",
+      "时间窗口和过滤条件",
+      "使用场景"
+    ],
+    "bad_answer_signals": [
+      "只给指标名不说明口径",
+      "指标越多越好"
+    ],
+    "common_mistakes": [
+      "只给指标名不说明口径",
+      "指标越多越好"
+    ],
+    "misconceptions": [
+      "只给指标名不说明口径",
+      "指标越多越好"
+    ],
+    "critical_errors": [
+      "把相关性直接当因果"
+    ],
+    "evidence_requirements": [
+      "说明分母分子或过滤条件"
+    ],
+    "verification_questions": [
+      "如果业务方质疑指标，你如何验证？"
+    ],
+    "follow_up": [
+      "如果业务方质疑指标，你如何验证？"
+    ],
+    "related_project_scenarios": [
+      "运营报表、用户增长分析"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_data_002",
+    "category": "数据分析",
+    "tags": [
+      "数据清洗",
+      "缺失值",
+      "异常值"
+    ],
+    "difficulty": "medium",
+    "question_type": "scenario",
+    "question": "面对缺失值和异常值，你会如何制定清洗规则并避免引入偏差？",
+    "answer": "应先分析缺失机制和异常来源，再根据业务含义选择删除、填补、截尾或单独标记，并记录规则对结论的影响。",
+    "expected_points": [
+      "缺失机制",
+      "异常来源",
+      "清洗策略",
+      "偏差影响"
+    ],
+    "bad_answer_signals": [
+      "缺失值一律填 0",
+      "异常值全部删除"
+    ],
+    "common_mistakes": [
+      "缺失值一律填 0",
+      "异常值全部删除"
+    ],
+    "misconceptions": [
+      "缺失值一律填 0",
+      "异常值全部删除"
+    ],
+    "critical_errors": [
+      "不记录清洗规则"
+    ],
+    "evidence_requirements": [
+      "说明清洗前后样本量变化"
+    ],
+    "verification_questions": [
+      "如何判断异常值是真实业务现象？"
+    ],
+    "follow_up": [
+      "如何判断异常值是真实业务现象？"
+    ],
+    "related_project_scenarios": [
+      "销售数据、用户行为日志"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_data_003",
+    "category": "数据分析",
+    "tags": [
+      "A/B 测试",
+      "假设检验",
+      "样本量"
+    ],
+    "difficulty": "hard",
+    "question_type": "principle",
+    "question": "A/B 测试中如何判断实验结论是否可靠？",
+    "answer": "需要明确假设、随机分流、样本量、统计显著性、置信区间、实验周期、干扰因素和业务显著性。",
+    "expected_points": [
+      "假设和随机分流",
+      "样本量",
+      "统计显著性与置信区间",
+      "业务显著性"
+    ],
+    "bad_answer_signals": [
+      "p 值小就一定有业务价值",
+      "样本量越小越快得出结论"
+    ],
+    "common_mistakes": [
+      "p 值小就一定有业务价值",
+      "样本量越小越快得出结论"
+    ],
+    "misconceptions": [
+      "p 值小就一定有业务价值",
+      "样本量越小越快得出结论"
+    ],
+    "critical_errors": [
+      "实验组和对照组不随机也能直接比较"
+    ],
+    "evidence_requirements": [
+      "说明显著性或置信区间"
+    ],
+    "verification_questions": [
+      "统计显著和业务显著有什么区别？"
+    ],
+    "follow_up": [
+      "统计显著和业务显著有什么区别？"
+    ],
+    "related_project_scenarios": [
+      "推荐策略、页面改版、营销活动"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_data_004",
+    "category": "数据分析",
+    "tags": [
+      "漏斗分析",
+      "留存分析",
+      "用户分群"
+    ],
+    "difficulty": "medium",
+    "question_type": "scenario",
+    "question": "你会如何用漏斗、留存和用户分群分析一个转化下降问题？",
+    "answer": "应先定位下降环节，再按渠道、用户类型、版本、时间等维度拆分，结合留存和行为路径判断原因。",
+    "expected_points": [
+      "漏斗环节定位",
+      "维度拆分",
+      "留存变化",
+      "行为路径验证"
+    ],
+    "bad_answer_signals": [
+      "只看总体转化率",
+      "分群越多结论越可靠"
+    ],
+    "common_mistakes": [
+      "只看总体转化率",
+      "分群越多结论越可靠"
+    ],
+    "misconceptions": [
+      "只看总体转化率",
+      "分群越多结论越可靠"
+    ],
+    "critical_errors": [
+      "没有样本量也做细分结论"
+    ],
+    "evidence_requirements": [
+      "说明一个拆分维度"
+    ],
+    "verification_questions": [
+      "如何避免辛普森悖论？"
+    ],
+    "follow_up": [
+      "如何避免辛普森悖论？"
+    ],
+    "related_project_scenarios": [
+      "注册转化、下单转化、功能使用"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_data_005",
+    "category": "数据分析",
+    "tags": [
+      "相关与因果",
+      "实验偏差",
+      "结论表达"
+    ],
+    "difficulty": "hard",
+    "question_type": "tradeoff",
+    "question": "如果两个指标高度相关，你会如何避免把相关性误判为因果？",
+    "answer": "需要结合业务机制、时间顺序、混杂变量、对照实验或准实验方法验证，并在结论中说明限制。",
+    "expected_points": [
+      "业务机制",
+      "混杂变量",
+      "时间顺序",
+      "实验或准实验验证"
+    ],
+    "bad_answer_signals": [
+      "相关系数高就说明因果",
+      "图表趋势一致就能下结论"
+    ],
+    "common_mistakes": [
+      "相关系数高就说明因果",
+      "图表趋势一致就能下结论"
+    ],
+    "misconceptions": [
+      "相关系数高就说明因果",
+      "图表趋势一致就能下结论"
+    ],
+    "critical_errors": [
+      "忽略混杂变量直接建议上线"
+    ],
+    "evidence_requirements": [
+      "说明一个验证因果的方法"
+    ],
+    "verification_questions": [
+      "哪些情况下只能说相关不能说因果？"
+    ],
+    "follow_up": [
+      "哪些情况下只能说相关不能说因果？"
+    ],
+    "related_project_scenarios": [
+      "运营分析、产品策略评估"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_data_006",
+    "category": "数据分析",
+    "tags": [
+      "SQL",
+      "Pandas",
+      "数据质量"
+    ],
+    "difficulty": "medium",
+    "question_type": "debugging",
+    "question": "报表数值和业务系统对不上，你会如何排查？",
+    "answer": "需要检查口径、时间区间、过滤条件、去重逻辑、ETL 延迟、空值处理、关联方式和源数据质量。",
+    "expected_points": [
+      "口径和时间区间",
+      "去重与关联",
+      "ETL 延迟",
+      "源数据质量"
+    ],
+    "bad_answer_signals": [
+      "报表不一致一定是 SQL 写错",
+      "只改展示层数字"
+    ],
+    "common_mistakes": [
+      "报表不一致一定是 SQL 写错",
+      "只改展示层数字"
+    ],
+    "misconceptions": [
+      "报表不一致一定是 SQL 写错",
+      "只改展示层数字"
+    ],
+    "critical_errors": [
+      "不核对源数据直接改结论"
+    ],
+    "evidence_requirements": [
+      "说明一个对账步骤"
+    ],
+    "verification_questions": [
+      "如何判断是 ETL 延迟还是口径问题？"
+    ],
+    "follow_up": [
+      "如何判断是 ETL 延迟还是口径问题？"
+    ],
+    "related_project_scenarios": [
+      "日报、经营看板、BI 报表"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_test_001",
+    "category": "软件测试",
+    "tags": [
+      "测试用例设计",
+      "等价类划分",
+      "边界值分析"
+    ],
+    "difficulty": "medium",
+    "question_type": "concept",
+    "question": "请说明等价类划分和边界值分析如何用于登录功能测试？",
+    "answer": "等价类用于划分有效和无效输入，边界值关注长度、范围、空值和临界条件，两者结合可提高覆盖效率。",
+    "expected_points": [
+      "有效和无效等价类",
+      "边界条件",
+      "异常输入",
+      "覆盖效率"
+    ],
+    "bad_answer_signals": [
+      "用例数量越多质量越高",
+      "只测正常登录就足够"
+    ],
+    "common_mistakes": [
+      "用例数量越多质量越高",
+      "只测正常登录就足够"
+    ],
+    "misconceptions": [
+      "用例数量越多质量越高",
+      "只测正常登录就足够"
+    ],
+    "critical_errors": [
+      "测试通过就代表没有缺陷"
+    ],
+    "evidence_requirements": [
+      "列出至少两个边界条件"
+    ],
+    "verification_questions": [
+      "如何避免遗漏异常输入？"
+    ],
+    "follow_up": [
+      "如何避免遗漏异常输入？"
+    ],
+    "related_project_scenarios": [
+      "登录、注册、表单校验"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_test_002",
+    "category": "软件测试",
+    "tags": [
+      "接口测试",
+      "pytest",
+      "Mock",
+      "fixture"
+    ],
+    "difficulty": "medium",
+    "question_type": "scenario",
+    "question": "你会如何用 pytest 设计一个接口测试，包括测试数据、fixture 和 Mock？",
+    "answer": "应准备独立测试数据，用 fixture 管理前置和清理，Mock 外部依赖，断言状态码、响应结构、业务字段和异常路径。",
+    "expected_points": [
+      "测试数据准备",
+      "fixture 前置和清理",
+      "Mock 外部依赖",
+      "响应断言"
+    ],
+    "bad_answer_signals": [
+      "接口测试只看状态码",
+      "测试数据可以污染生产库"
+    ],
+    "common_mistakes": [
+      "接口测试只看状态码",
+      "测试数据可以污染生产库"
+    ],
+    "misconceptions": [
+      "接口测试只看状态码",
+      "测试数据可以污染生产库"
+    ],
+    "critical_errors": [
+      "不隔离外部依赖导致测试不稳定"
+    ],
+    "evidence_requirements": [
+      "说明断言字段和数据清理方式"
+    ],
+    "verification_questions": [
+      "什么时候应该 Mock，什么时候不应该？"
+    ],
+    "follow_up": [
+      "什么时候应该 Mock，什么时候不应该？"
+    ],
+    "related_project_scenarios": [
+      "用户接口、订单接口、LLM API 封装"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_test_003",
+    "category": "软件测试",
+    "tags": [
+      "回归测试",
+      "缺陷生命周期",
+      "日志分析"
+    ],
+    "difficulty": "medium",
+    "question_type": "scenario",
+    "question": "一个缺陷修复后，你会如何验证并安排回归测试？",
+    "answer": "需要复现原缺陷、验证修复、检查影响范围、补充回归用例、记录缺陷状态，并结合日志确认异常链路不再出现。",
+    "expected_points": [
+      "缺陷复现",
+      "修复验证",
+      "影响范围",
+      "回归用例和日志"
+    ],
+    "bad_answer_signals": [
+      "开发说修好了就关闭缺陷",
+      "只测原步骤不测影响范围"
+    ],
+    "common_mistakes": [
+      "开发说修好了就关闭缺陷",
+      "只测原步骤不测影响范围"
+    ],
+    "misconceptions": [
+      "开发说修好了就关闭缺陷",
+      "只测原步骤不测影响范围"
+    ],
+    "critical_errors": [
+      "不保留缺陷复现证据"
+    ],
+    "evidence_requirements": [
+      "说明缺陷状态流转"
+    ],
+    "verification_questions": [
+      "如何判断回归范围？"
+    ],
+    "follow_up": [
+      "如何判断回归范围？"
+    ],
+    "related_project_scenarios": [
+      "Web 功能、接口变更、线上问题修复"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_test_004",
+    "category": "软件测试",
+    "tags": [
+      "Flaky Test",
+      "自动化测试",
+      "测试隔离"
+    ],
+    "difficulty": "hard",
+    "question_type": "debugging",
+    "question": "自动化测试偶发失败，你会如何定位 Flaky Test？",
+    "answer": "应分析失败日志、截图、时间依赖、数据依赖、并发顺序、外部服务和等待策略，并通过隔离和稳定断言修复。",
+    "expected_points": [
+      "失败证据",
+      "时间和数据依赖",
+      "外部服务",
+      "稳定等待和断言"
+    ],
+    "bad_answer_signals": [
+      "Flaky Test 只需要重复运行即可",
+      "偶发失败不用修"
+    ],
+    "common_mistakes": [
+      "Flaky Test 只需要重复运行即可",
+      "偶发失败不用修"
+    ],
+    "misconceptions": [
+      "Flaky Test 只需要重复运行即可",
+      "偶发失败不用修"
+    ],
+    "critical_errors": [
+      "把不稳定用例全部删除"
+    ],
+    "evidence_requirements": [
+      "说明日志、截图或重试统计"
+    ],
+    "verification_questions": [
+      "如何区分产品缺陷和测试脚本问题？"
+    ],
+    "follow_up": [
+      "如何区分产品缺陷和测试脚本问题？"
+    ],
+    "related_project_scenarios": [
+      "E2E 自动化、接口自动化、CI 流水线"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_test_005",
+    "category": "软件测试",
+    "tags": [
+      "性能测试",
+      "压力测试",
+      "TP95",
+      "TP99"
+    ],
+    "difficulty": "hard",
+    "question_type": "scenario",
+    "question": "你会如何为一个接口设计性能测试，并解读 TP95、TP99 和吞吐量？",
+    "answer": "需要定义并发模型、测试数据、压测环境、关键指标、瓶颈定位和通过标准；TP95/TP99 反映尾部延迟，吞吐量反映处理能力。",
+    "expected_points": [
+      "并发模型",
+      "测试数据和环境",
+      "TP95/TP99",
+      "吞吐量和瓶颈定位"
+    ],
+    "bad_answer_signals": [
+      "平均响应时间足够代表体验",
+      "压测环境无所谓"
+    ],
+    "common_mistakes": [
+      "平均响应时间足够代表体验",
+      "压测环境无所谓"
+    ],
+    "misconceptions": [
+      "平均响应时间足够代表体验",
+      "压测环境无所谓"
+    ],
+    "critical_errors": [
+      "用生产数据压测且不脱敏"
+    ],
+    "evidence_requirements": [
+      "说明通过标准或阈值"
+    ],
+    "verification_questions": [
+      "TP99 很高但平均值正常说明什么？"
+    ],
+    "follow_up": [
+      "TP99 很高但平均值正常说明什么？"
+    ],
+    "related_project_scenarios": [
+      "登录接口、查询接口、LLM 调用接口"
+    ],
+    "source": "final_targeted_expansion"
+  },
+  {
+    "id": "final_test_006",
+    "category": "软件测试",
+    "tags": [
+      "LLM 输出测试",
+      "RAG 相关性测试",
+      "JSON 合法性",
+      "fallback 测试"
+    ],
+    "difficulty": "medium",
+    "question_type": "scenario",
+    "question": "针对一个 LLM + RAG 应用，你会设计哪些测试来验证输出稳定性和 fallback？",
+    "answer": "应测试 RAG 相关性、结构化 JSON 合法性、超时重试、fallback、敏感输入、多轮上下文和不同质量答案的评分稳定性。",
+    "expected_points": [
+      "RAG 相关性",
+      "JSON 合法性",
+      "超时和 fallback",
+      "多轮上下文"
+    ],
+    "bad_answer_signals": [
+      "LLM 输出看起来通顺就算通过",
+      "只测一次成功路径"
+    ],
+    "common_mistakes": [
+      "LLM 输出看起来通顺就算通过",
+      "只测一次成功路径"
+    ],
+    "misconceptions": [
+      "LLM 输出看起来通顺就算通过",
+      "只测一次成功路径"
+    ],
+    "critical_errors": [
+      "不测超时和格式错误"
+    ],
+    "evidence_requirements": [
+      "说明至少一个异常场景"
+    ],
+    "verification_questions": [
+      "如何判断 RAG 召回是否支持最终回答？"
+    ],
+    "follow_up": [
+      "如何判断 RAG 召回是否支持最终回答？"
+    ],
+    "related_project_scenarios": [
+      "AI 面试助手、知识问答、报告生成"
+    ],
+    "source": "final_targeted_expansion"
   }
 ]

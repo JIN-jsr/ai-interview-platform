@@ -4,6 +4,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
+from src.product_features import ROLE_KEYWORDS, normalize_role
+
 
 DEFAULT_KB_PATH = "data/knowledge_base.json"
 
@@ -48,25 +50,14 @@ def flatten_profile_keywords(profile: Dict[str, Any]) -> List[str]:
     if candidate_profile:
         keywords.append(candidate_profile)
 
-    # Add role-related expansion words
-    role = str(profile.get("target_role", ""))
-    if "后端" in role:
-        keywords.extend([
-            "后端开发", "数据库", "MySQL", "Redis", "接口", "API", "RESTful API",
-            "Spring Boot", "Flask", "FastAPI", "计算机网络", "操作系统", "部署",
-            "Linux", "Docker", "事务", "索引", "缓存"
-        ])
-    if "前端" in role:
-        keywords.extend(["前端开发", "HTML", "CSS", "JavaScript", "React", "Vue"])
-    if "AI" in role or "人工智能" in role:
-        keywords.extend([
-            "人工智能", "AI应用开发", "机器学习", "深度学习", "PyTorch", "模型",
-            "RAG", "LLM", "大模型API", "Prompt Engineering", "Embedding",
-            "向量数据库", "Chroma", "LangChain", "Function Calling", "Agent",
-            "Rerank", "Token 管理", "检索增强生成", "向量检索"
-        ])
-    if "数据" in role:
-        keywords.extend(["Python", "数据库", "SQL", "机器学习", "评价指标"])
+    role = normalize_role(str(profile.get("target_role", "")))
+    keywords.extend(ROLE_KEYWORDS.get(role, []))
+    if role == "后端开发":
+        keywords.extend(["计算机网络", "操作系统", "Linux", "Docker", "事务", "索引", "缓存"])
+    elif role == "AI应用开发":
+        keywords.extend(["人工智能", "机器学习", "深度学习", "PyTorch", "模型", "检索增强生成"])
+    elif role == "数据分析":
+        keywords.extend(["Python", "数据库", "SQL", "评价指标", "业务指标"])
 
     return keywords
 
@@ -106,6 +97,26 @@ def role_priority_score(profile: Dict[str, Any], item: Dict[str, Any]) -> int:
         for term in preferred_terms:
             if term in text:
                 score += 7
+
+    if "数据" in role:
+        preferred_terms = [
+            "sql", "pandas", "numpy", "excel", "数据清洗", "指标", "可视化",
+            "a/b", "假设检验", "置信区间", "漏斗", "留存", "报表", "样本量"
+        ]
+        for term in preferred_terms:
+            if term in text:
+                score += 7
+
+    if "测试" in role:
+        preferred_terms = [
+            "测试", "pytest", "接口测试", "自动化测试", "回归测试", "冒烟测试",
+            "边界值", "等价类", "mock", "fixture", "flaky", "性能测试",
+            "压力测试", "日志分析", "异常场景", "缺陷", "ci/cd", "playwright",
+            "selenium", "rag 相关性", "json 合法性", "fallback"
+        ]
+        for term in preferred_terms:
+            if term in text:
+                score += 8
 
     return score
 

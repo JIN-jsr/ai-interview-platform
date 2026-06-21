@@ -6,24 +6,42 @@ from typing import Any, Dict, List
 ROLE_KEYWORDS = {
     "后端开发": [
         "Java", "Spring", "Spring Boot", "Flask", "FastAPI", "Go", "Gin",
-        "MySQL", "Redis", "Kafka", "RabbitMQ", "接口", "高并发", "分布式",
-        "缓存", "数据库", "API", "Docker", "Linux"
+        "RESTful API", "接口设计", "MySQL", "PostgreSQL", "Redis", "数据库事务",
+        "索引优化", "缓存一致性", "Kafka", "RabbitMQ", "消息队列", "接口",
+        "高并发", "分布式锁", "幂等性", "限流", "熔断", "降级", "微服务",
+        "日志与监控", "接口安全", "部署", "CI/CD", "Docker", "Linux", "API"
     ],
     "AI应用开发": [
-        "LLM", "大模型", "RAG", "Embedding", "向量数据库", "Prompt",
-        "LangChain", "Streamlit", "模型调用", "结构化输出", "Agent",
-        "Function Calling", "Rerank", "Token"
+        "Python", "LLM API", "大模型API", "大模型", "RAG", "Embedding",
+        "向量检索", "重排序", "Rerank", "Prompt Engineering", "Prompt",
+        "结构化输出", "JSON 校验", "上下文管理", "Token 成本", "Token 管理",
+        "模型超时", "重试", "fallback", "幻觉控制", "输出稳定性", "内容安全",
+        "评估指标", "缓存", "限流", "日志与可观测性", "模型权限", "API Key 管理",
+        "LangChain", "Streamlit", "模型调用", "Agent", "Function Calling", "工具调用"
     ],
     "数据分析": [
-        "SQL", "Pandas", "NumPy", "Excel", "Tableau", "Power BI", "数据清洗",
-        "指标体系", "可视化", "A/B测试", "统计分析", "留存分析", "漏斗分析", "报表"
+        "SQL", "Excel", "Pandas", "NumPy", "数据清洗", "缺失值", "异常值",
+        "指标体系", "数据可视化", "描述性统计", "假设检验", "置信区间", "A/B 测试",
+        "A/B测试", "相关与因果", "漏斗分析", "留存分析", "用户分群", "报表设计",
+        "数据质量", "业务理解", "结论表达", "实验偏差", "样本量", "统计显著性",
+        "Tableau", "Power BI", "可视化", "报表"
     ],
     "前端开发": [
-        "HTML", "CSS", "JavaScript", "TypeScript", "Vue", "React",
-        "组件化", "状态管理", "响应式布局"
+        "HTML", "CSS", "JavaScript", "TypeScript", "Vue", "React", "组件化",
+        "状态管理", "Axios", "Fetch", "响应式布局", "浏览器渲染", "事件循环",
+        "前端工程化", "Vite", "Webpack", "性能优化", "懒加载", "缓存", "跨域",
+        "CORS", "前端安全", "XSS", "CSRF", "单元测试", "E2E 测试", "Playwright",
+        "Cypress", "可访问性"
     ],
     "软件测试": [
-        "测试用例", "自动化测试", "pytest", "接口测试", "性能测试", "缺陷管理"
+        "测试用例设计", "测试用例", "等价类划分", "边界值分析", "判定表", "场景法",
+        "错误推测", "冒烟测试", "回归测试", "接口测试", "自动化测试", "pytest",
+        "Selenium", "Playwright", "Mock", "测试隔离", "fixture", "参数化",
+        "Flaky Test", "性能测试", "压力测试", "负载测试", "稳定性测试", "TP95",
+        "TP99", "吞吐量", "并发用户", "缺陷生命周期", "严重程度", "优先级",
+        "缺陷管理", "日志分析", "异常场景", "测试数据准备", "CI/CD", "发布准入",
+        "安全测试", "可测试性", "LLM 输出测试", "Prompt 鲁棒性", "RAG 相关性测试",
+        "JSON 合法性", "fallback 测试", "多轮上下文测试"
     ],
 }
 
@@ -163,14 +181,19 @@ def summarize_weak_points(records: List[Dict[str, Any]], dimension_scores: Dict[
         coverage = float(analysis.get("coverage_ratio", 1) or 0)
         score = float(analysis.get("overall_temp_score", 10) or 0)
         missing = analysis.get("missing_points", [])
-        category = record.get("question_type") or record.get("knowledge_id") or "综合问题"
+        category = record.get("display_category") or record.get("question_type") or "综合问题"
         if coverage < 0.6 or missing or score < 6:
             category_counter[category] += 1
-            topic = record.get("knowledge_id") or record.get("question_type") or "综合问题"
+            topic = (
+                record.get("display_topic")
+                or record.get("display_category")
+                or record.get("question_type")
+                or "综合问题"
+            )
             if missing:
-                weak_items.append(f"{topic}：回答缺少 {'、'.join(str(p) for p in missing[:3])}。")
+                weak_items.append(f"{topic}：问题表现为关键要点覆盖不足，具体缺少 {'、'.join(str(p) for p in missing[:3])}。建议补充定义、原理、场景和验证方式。")
             else:
-                weak_items.append(f"{topic}：回答覆盖度或临时评分偏低，建议补充原理、场景和项目案例。")
+                weak_items.append(f"{topic}：问题表现为回答覆盖度或临时评分偏低。建议补充原理、场景和项目案例。")
 
     for dim, score in (dimension_scores or {}).items():
         try:

@@ -894,10 +894,10 @@ def render_intro_page():
     st.title("系统介绍")
     if not USE_REFINED_UI:
         st.write(
-            "本系统面向计算机相关专业学生和求职者，围绕简历内容生成候选人画像，"
-            "结合本地知识库与可选大模型能力，完成从模拟面试到评分反馈的闭环训练。"
+            "本系统是面向计算机相关专业学生和求职者的简历驱动模拟面试与能力提升平台，"
+            "用于面试准备、学习训练和项目表达复盘。"
         )
-        st.code("简历输入 -> 用户画像 -> RAG 检索 -> LLM 连续追问 -> 回答分析 -> 五维度评分报告", language="text")
+        st.code("简历输入与解析 -> 候选人画像与岗位匹配 -> RAG 知识检索 -> LLM 动态提问或规则 fallback -> 连续面试与项目追问 -> 回答分析 -> 五维度评分 -> 历史记录与能力成长复盘", language="text")
         col_a, col_b = st.columns(2)
         with col_a:
             st.markdown("### 核心能力")
@@ -905,25 +905,26 @@ def render_intro_page():
             st.write("- 岗位画像和面试重点生成")
             st.write("- RAG 知识库检索与岗位导向选题")
             st.write("- LLM 动态出题与上下文连续追问")
-            st.write("- 回答覆盖度分析和评分报告")
+            st.write("- 回答覆盖度分析、五维评分和成长复盘")
         with col_b:
             st.markdown("### 技术特点")
-            st.write("- LLM + RAG 协同，问题基于知识库和候选人画像")
-            st.write("- 规则备用机制，接口不可用时仍可完成面试")
-            st.write("- 难度控制、岗位导向和问题元数据可解释")
-            st.write("- 本地 JSON 面试历史，支持独立会话恢复")
-            st.write("- 五维度评分：基础、项目、逻辑、表达、岗位匹配")
+            st.write("- 简历驱动，而不是完全随机问答")
+            st.write("- RAG 提供可解释知识依据，LLM 提供自然问题表达")
+            st.write("- fallback 保证接口异常时仍能完成基本流程")
+            st.write("- 本地规则生成评分，LLM 只润色说明")
+            st.write("- 报告展示评分依据、薄弱知识点和改进建议")
         st.markdown("### 适合用户")
         st.write("适合准备技术面试、课程展示、竞赛演示或希望系统化复盘项目表达的学生与求职者。")
         st.markdown("### 评分报告说明")
-        st.write("评分报告从基础知识、项目理解、回答逻辑、表达完整性和岗位匹配五个维度给出结构化反馈，便于后续针对性提升。")
+        st.write("评分报告是基于结构化证据和启发式规则形成的训练型辅助评价，便于后续针对性提升。")
+        st.info("本系统生成的评分和建议主要用于学习训练、自我复盘和面试准备，不应作为真实招聘录用或个人能力认定的唯一依据。")
         return
 
     st.markdown(
         """
         <p class="intro-lead">
-        本系统面向计算机相关专业学生与求职者，围绕简历内容生成候选人画像，
-        结合本地知识库与大模型能力，完成从模拟面试到评分反馈的闭环训练。
+        本系统是面向计算机相关专业学生与求职者的简历驱动模拟面试与能力提升平台，
+        用于面试准备、学习训练和项目表达复盘。
         </p>
         <div class="intro-card">
           <h3>训练流程</h3>
@@ -932,13 +933,15 @@ def render_intro_page():
             <span>→</span>
             <span class="process-step">用户画像</span>
             <span>→</span>
+            <span class="process-step">岗位匹配</span>
+            <span>→</span>
             <span class="process-step">RAG 检索</span>
             <span>→</span>
-            <span class="process-step">LLM 生成追问</span>
+            <span class="process-step">LLM / fallback 提问</span>
             <span>→</span>
-            <span class="process-step">回答分析</span>
+            <span class="process-step">项目追问</span>
             <span>→</span>
-            <span class="process-step">五维度评分报告</span>
+            <span class="process-step">五维评分与成长复盘</span>
           </div>
         </div>
         """,
@@ -953,10 +956,10 @@ def render_intro_page():
               <h3>核心能力</h3>
               <ul>
                 <li>简历解析与多文件材料合并</li>
-                <li>岗位画像和面试画像生成</li>
+                <li>候选人画像与岗位匹配分析</li>
                 <li>RAG 知识库检索与岗位导向选题</li>
                 <li>LLM 动态出题与上下文连续追问</li>
-                <li>回答覆盖度分析和评分报告</li>
+                <li>回答分析、评分报告和能力成长复盘</li>
               </ul>
             </div>
             """,
@@ -968,11 +971,11 @@ def render_intro_page():
             <div class="intro-card">
               <h3>技术特点</h3>
               <ul>
-                <li>LLM + RAG 协同，问题基于知识库和候选人画像</li>
-                <li>策略降级机制，接口不可用时仍可完成面试</li>
-                <li>难度控制、岗位导向和问题元数据可解释</li>
-                <li>本地 JSON 面试历史，支持独立会话恢复</li>
-                <li>五维度评分：基础、项目、逻辑、表达、岗位匹配</li>
+                <li>简历驱动，而不是完全随机问答</li>
+                <li>RAG 提供可解释知识依据，LLM 提供自然问题表达</li>
+                <li>fallback 保证接口异常时仍能完成基本流程</li>
+                <li>本地规则生成评分，LLM 只润色说明</li>
+                <li>报告展示评分依据、薄弱知识点和改进建议</li>
               </ul>
             </div>
             """,
@@ -995,11 +998,13 @@ def render_intro_page():
             """
             <div class="intro-card">
               <h3>评分报告说明</h3>
-              <p>评分报告从基础知识、项目理解、回答逻辑、表达完整性和岗位匹配五个维度给出结构化反馈，便于后续针对性提升。</p>
+              <p>评分报告是基于结构化证据和启发式规则形成的训练型辅助评价，便于后续针对性提升。</p>
             </div>
             """,
             unsafe_allow_html=True,
         )
+
+    st.info("本系统生成的评分和建议主要用于学习训练、自我复盘和面试准备，不应作为真实招聘录用或个人能力认定的唯一依据。")
 
 
 def render_realtime_status(target_role, difficulty, current_status, assistant_count, kb_stats):
@@ -1173,6 +1178,7 @@ def render_self_check_page():
         "src/report_image_exporter.py",
         "docs/llm_config_guide.md",
         "docs/rag_build_guide.md",
+        "docs/Project_Design_Document.pdf",
         "docs/Project_Design_Document.md",
         "docs/demo_script.md",
         "docs/test_checklist.md",
@@ -1231,7 +1237,8 @@ def render_self_check_page():
     st.markdown("### 文档位置")
     st.write("- LLM 配置教程：`docs/llm_config_guide.md`")
     st.write("- RAG 构建说明：`docs/rag_build_guide.md`")
-    st.write("- 项目设计文档：`docs/Project_Design_Document.md`")
+    st.write("- 项目设计文档 PDF 正式版：`docs/Project_Design_Document.pdf`")
+    st.write("- 项目设计文档 Markdown 在线版：`docs/Project_Design_Document.md`")
     st.write("- 演示视频脚本：`docs/demo_script.md`")
     st.write("- 测试清单：`docs/test_checklist.md`")
     st.write("- 最终提交清单：`docs/final_submission_checklist.md`")
@@ -1942,6 +1949,20 @@ def rebuild_question_usage():
     st.session_state.used_categories = used_categories
 
 
+def get_question_coverage_counts():
+    project_types = {"project", "project_followup"}
+    followup_types = {"project_followup", "rag_followup"}
+    project_count = 0
+    followup_count = 0
+    for meta in st.session_state.question_meta or []:
+        question_type = (meta or {}).get("type") or (meta or {}).get("question_type")
+        if question_type in project_types:
+            project_count += 1
+        if question_type in followup_types:
+            followup_count += 1
+    return project_count, followup_count
+
+
 def edit_latest_answer_and_regenerate(edited_answer):
     edited_answer = (edited_answer or "").strip()
     if not edited_answer:
@@ -1983,6 +2004,7 @@ def edit_latest_answer_and_regenerate(edited_answer):
         st.session_state.interview_records.append(
             build_interview_record(answered_meta, edited_answer, analysis)
         )
+        asked_project_count, asked_followup_count = get_question_coverage_counts()
         next_info = get_next_question(
             profile=st.session_state.profile or {},
             history=st.session_state.messages,
@@ -1993,7 +2015,9 @@ def edit_latest_answer_and_regenerate(edited_answer):
             last_analysis=analysis,
             followup_count=st.session_state.followup_count,
             used_knowledge_ids=st.session_state.used_knowledge_ids,
-            used_categories=st.session_state.used_categories
+            used_categories=st.session_state.used_categories,
+            asked_project_count=asked_project_count,
+            asked_followup_count=asked_followup_count,
         )
 
     st.session_state.rag_index = next_info.get("rag_index", st.session_state.rag_index)
@@ -2401,7 +2425,9 @@ with tab2:
                         rag_index=st.session_state.rag_index,
                         followup_count=st.session_state.followup_count,
                         used_knowledge_ids=st.session_state.used_knowledge_ids,
-                        used_categories=st.session_state.used_categories
+                        used_categories=st.session_state.used_categories,
+                        asked_project_count=0,
+                        asked_followup_count=0,
                     )
                     st.session_state.messages.append({"role": "assistant", "content": first["question"]})
                     st.session_state.current_question_meta = first
@@ -2468,6 +2494,7 @@ with tab2:
                 st.session_state.interview_records.append(
                     build_interview_record(last_meta, user_answer, analysis)
                 )
+                asked_project_count, asked_followup_count = get_question_coverage_counts()
 
                 next_info = get_next_question(
                     profile=st.session_state.profile or {},
@@ -2479,7 +2506,9 @@ with tab2:
                     last_analysis=analysis,
                     followup_count=st.session_state.followup_count,
                     used_knowledge_ids=st.session_state.used_knowledge_ids,
-                    used_categories=st.session_state.used_categories
+                    used_categories=st.session_state.used_categories,
+                    asked_project_count=asked_project_count,
+                    asked_followup_count=asked_followup_count,
                 )
 
             st.session_state.rag_index = next_info.get("rag_index", st.session_state.rag_index)

@@ -26,7 +26,7 @@
 
 ![模拟面试工作区](docs/assets/interview_workspace.png)
 
-图 2 模拟面试工作区，展示当前问题、问题详情和实时面试状态。
+图 2 模拟面试工作区，展示问题详情、生成方式、难度、LLM 生成结果、RAG 出题依据、回答分析区域、进度与实时面试状态。
 
 ![评分报告仪表盘](docs/assets/final_report_dashboard.png)
 
@@ -51,6 +51,7 @@
 - 支持回答关键词、覆盖率、逻辑性、完整性和缺失要点分析。
 - 支持修改并重新提交最近一次回答。
 - 支持五维度评分报告、不完整面试提醒、回答稳定性、问题类型分布、岗位能力覆盖和薄弱点卡片。
+- 支持评分置信度、项目证据充分性提示和误区/关键错误识别。
 - 支持 Markdown、JSON、完整长图 PNG、摘要海报 PNG 导出。
 - 支持本地历史面试会话、报告复盘和能力成长曲线。
 - 支持演示模式，内置五类虚构岗位样例简历和回答模板。
@@ -59,8 +60,10 @@
 
 - 完整闭环：从简历到面试再到评分报告和成长复盘。
 - 可解释出题：RAG 决定考察知识点，LLM 负责自然表达。
+- 五岗位覆盖：后端开发、前端开发、AI应用开发、数据分析、软件测试共用统一岗位能力词库。
+- 项目深挖调度：完整面试中会尽量保证项目深挖和上下文追问数量。
 - fallback 完整：LLM 超时、关闭或返回异常时，系统仍可继续面试和生成报告。
-- 报告可信：评分由本地规则根据回答记录和结构化证据计算，LLM 只润色文字。
+- 报告可解释：评分是基于结构化证据和启发式规则形成的训练型辅助评价，LLM 只润色文字。
 - 适合演示：本地运行、样例数据、历史会话和多格式报告导出都可独立展示。
 
 ## 技术栈
@@ -69,7 +72,7 @@
 - Streamlit
 - JSON 本地知识库
 - OpenAI-compatible Chat Completions API
-- 阿里云百炼 / DashScope 兼容模型接口
+- 阿里云百炼 / DashScope OpenAI 兼容 Chat Completions API（qwen3.7-plus）
 - pdfplumber：PDF 简历读取
 - python-docx：DOCX 简历读取
 - python-dotenv：本地环境变量管理
@@ -98,7 +101,7 @@
 
 首次运行：
 
-```bash
+```bat
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
@@ -107,7 +110,7 @@ streamlit run app.py
 
 日常运行：
 
-```bash
+```bat
 .venv\Scripts\activate
 streamlit run app.py
 ```
@@ -118,7 +121,7 @@ streamlit run app.py
 start_app.bat
 ```
 
-`start_app.bat` 只负责进入项目目录、激活 `.venv` 并启动 Streamlit，不会自动安装依赖。
+`start_app.bat` 只负责进入项目目录，并使用 `.venv\Scripts\python.exe -m streamlit run app.py` 启动应用，不会自动安装依赖。
 
 ## 详细运行说明
 
@@ -163,9 +166,9 @@ USE_LLM=false
 data/knowledge_base.json
 ```
 
-每条知识点包含 ID、分类、标签、难度、题型、问题、参考答案、期望回答要点、追问方向、项目场景和来源字段。知识库数量会随版本更新，运行 `python scripts/self_check.py` 可查看当前有效条目数。
+每条知识点包含 ID、分类、标签、难度、题型、问题、参考答案、期望回答要点、追问方向、项目场景和来源字段。当前知识库为 330 条；本轮扩展从 300 条小幅增加到 330 条，重点补齐五岗位能力、项目深挖、故障排查、测试验证和常见误区，而不是追求条目数量。
 
-当前检索采用本地可解释关键词检索和岗位导向排序，不依赖向量数据库或额外服务。系统会根据目标岗位、技能关键词、难度、近期已使用知识点等因素选择问题，并尽量避免短时间重复考察同一知识点。
+当前检索采用本地可解释关键词检索和岗位导向排序，不依赖向量数据库或额外服务。系统会根据目标岗位、技能关键词、难度、近期已使用知识点等因素选择问题，并尽量避免短时间重复考察同一知识点。知识库还支持可选的 `common_mistakes`、`misconceptions`、`critical_errors`、`evidence_requirements` 等字段，用于识别明确误区和证据不足。
 
 ## 评分与反馈体系
 
@@ -180,6 +183,10 @@ data/knowledge_base.json
 | 岗位匹配度 | 15% |
 
 LLM 只用于问题自然表达和报告文字润色，不改变分数、题数或权重。若 LLM 不可用，报告文字会使用本地规则生成。
+
+报告还会给出 `scoring_confidence`、`dimension_confidence` 和项目证据充分性提示。若本轮项目深挖题不足，系统会显示“本轮项目深挖题数量不足，该维度评价可信度较低。”，避免把调度证据不足隐藏成确定性结论。
+
+评分主要服务于训练、自我复盘和面试准备，不应作为真实招聘录用或个人能力认定的唯一依据。
 
 ## 演示模式
 
@@ -232,6 +239,7 @@ AI模拟面试与能力提升平台/
 │  ├─ sample_answers_data_analysis.md
 │  └─ sample_answers_testing.md
 ├─ docs/
+│  ├─ Project_Design_Document.pdf
 │  ├─ Project_Design_Document.md
 │  ├─ demo_script.md
 │  ├─ final_submission_checklist.md
@@ -239,7 +247,22 @@ AI模拟面试与能力提升平台/
 │  ├─ rag_build_guide.md
 │  ├─ test_checklist.md
 │  └─ assets/
+│     ├─ homepage.png
+│     ├─ resume_analysis_01_input.png
+│     ├─ resume_analysis_02_candidate_profile.png
+│     ├─ resume_analysis_03_role_match.png
+│     ├─ interview_workspace.png
+│     ├─ sidebar_navigation_01.png
+│     ├─ sidebar_navigation_02.png
+│     ├─ rag_evidence.png
+│     ├─ final_report_dashboard.png
+│     ├─ ability_growth_curve.png
+│     ├─ report_summary_poster.png
+│     ├─ report_full_long.png
+│     ├─ system_architecture.png
+│     └─ README.md
 ├─ scripts/
+│  ├─ scoring_calibration_check.py
 │  └─ self_check.py
 ├─ src/
 │  ├─ __init__.py
@@ -266,7 +289,9 @@ AI模拟面试与能力提升平台/
 
 ## 文档导航
 
-- [项目设计文档](docs/Project_Design_Document.md)
+- [项目设计文档（PDF 正式版）](docs/Project_Design_Document.pdf)
+- [项目设计文档（Markdown 在线版）](docs/Project_Design_Document.md)
+- [RAG 覆盖审计](docs/rag_coverage_audit.md)
 - [LLM 配置教程](docs/llm_config_guide.md)
 - [RAG 知识库构建说明](docs/rag_build_guide.md)
 - [演示视频脚本](docs/demo_script.md)
@@ -279,12 +304,15 @@ AI模拟面试与能力提升平台/
 
 提交前建议运行：
 
-```bash
+```bat
 python scripts/self_check.py
+python scripts/scoring_calibration_check.py
 python -m compileall app.py src scripts
 git diff --check
 git status
 ```
+
+正式提交和固定排版版本为 `docs/Project_Design_Document.pdf`；Markdown 文件用于 GitHub 在线阅读。最终提交格式以官方赛题文件和通知为准。
 
 已验证环境：
 
@@ -311,7 +339,7 @@ git status
 ## 已知限制
 
 - 当前 RAG 检索为本地关键词检索，未接入真正的向量数据库。
-- 评分规则是启发式方法，适合训练和演示，不等同于真实招聘评价。
+- 评分规则是启发式方法，适合训练和演示，不等同于真实招聘评价，也不宣称完全客观。
 - LLM 调用受网络、账号权限、模型可用性和地区 endpoint 影响。
 - 云部署、权限系统、审计日志和生产级隐私合规不在当前提交范围内。
 

@@ -3,7 +3,7 @@ import re
 from typing import Any, Dict, List, Tuple
 
 from src.llm_feedback_polisher import polish_final_report_text_with_llm
-from src.product_features import generate_learning_recommendations, summarize_weak_points
+from src.product_features import ROLE_KEYWORDS, generate_learning_recommendations, normalize_role, summarize_weak_points
 from src.rag_display import attach_rag_display_fields
 
 
@@ -18,29 +18,7 @@ WEIGHTS = {
 
 BASIC_TYPES = {"rag_basic", "rag_followup", "basic"}
 PROJECT_TYPES = {"project", "project_followup"}
-
-ROLE_SKILL_KEYWORDS = {
-    "后端": [
-        "Python", "Java", "Go", "Gin", "Flask", "FastAPI", "Spring Boot",
-        "MySQL", "PostgreSQL", "Redis", "RabbitMQ", "Kafka", "RESTful API",
-        "接口设计", "微服务", "高并发", "分布式锁", "幂等性", "限流", "熔断",
-        "降级", "监控告警", "异步任务", "消息队列", "本地消息表", "Lua", "Lua 脚本",
-        "布隆过滤器", "数据库事务", "索引优化", "缓存一致性", "部署", "Docker", "Kubernetes"
-    ],
-    "AI": [
-        "LLM", "大语言模型", "大模型 API", "大模型API", "RAG", "Embedding",
-        "向量数据库", "Chroma", "Milvus", "FAISS", "LangChain", "Prompt Engineering",
-        "Function Calling", "Agent", "Rerank", "Token", "Token 管理", "上下文管理",
-        "上下文压缩", "结构化输出", "模型评估", "AI 工程化", "Streamlit", "FastAPI",
-        "模型调用", "检索增强生成"
-    ],
-    "前端": [
-        "HTML", "CSS", "JavaScript", "TypeScript", "Vue", "React", "Element Plus",
-        "前端工程化", "组件化", "状态管理", "响应式布局"
-    ],
-    "数据": ["SQL", "数据", "分析", "指标", "可视化", "统计", "报表"]
-}
-
+VALID_CONFIDENCE_VALUES = {"high", "medium", "low"}
 
 def clamp(value: float, low: float = 0, high: float = 100) -> float:
     return max(low, min(high, value))
@@ -192,6 +170,8 @@ def build_weak_point_cards(records: List[Dict[str, Any]], weak_points: List[str]
         evidence = "、".join(str(item) for item in missing[:3]) if missing else f"覆盖率 {coverage:.2f}，临时评分 {score}/10"
         cards.append({
             "title": str(title),
+            "knowledge_point": str(title),
+            "problem": "关键要点覆盖不足" if missing else "回答覆盖度或临时评分偏低",
             "evidence": str(evidence),
             "suggestion": "建议按“定义-原理-场景-项目案例”补全回答，并主动说明边界条件和验证方式。",
         })
@@ -201,6 +181,8 @@ def build_weak_point_cards(records: List[Dict[str, Any]], weak_points: List[str]
         for item in (weak_points or [])[:3]:
             cards.append({
                 "title": "综合提升点",
+                "knowledge_point": "综合提升点",
+                "problem": "需要专项复盘",
                 "evidence": str(item),
                 "suggestion": "建议继续用真实项目案例支撑技术判断，避免只停留在概念层面。",
             })
@@ -272,15 +254,7 @@ def term_in_text(term: str, text: str) -> bool:
 
 
 def get_role_keywords(target_role: str) -> List[str]:
-    if "后端" in target_role:
-        return ROLE_SKILL_KEYWORDS["后端"]
-    if "AI" in target_role or "人工智能" in target_role:
-        return ROLE_SKILL_KEYWORDS["AI"]
-    if "前端" in target_role:
-        return ROLE_SKILL_KEYWORDS["前端"]
-    if "数据" in target_role:
-        return ROLE_SKILL_KEYWORDS["数据"]
-    return []
+    return ROLE_KEYWORDS.get(normalize_role(target_role), [])
 
 
 def score_basic_knowledge(records: List[Dict[str, Any]]) -> Tuple[float, List[str]]:
@@ -292,22 +266,31 @@ def score_basic_knowledge(records: List[Dict[str, Any]]) -> Tuple[float, List[st
 
     technical_scores = []
     coverage_scores = []
+    misconception_penalties = []
     for record in basic_records:
         analysis = record.get("analysis", {})
         technical_scores.append(analysis.get("technical_score", 0) * 10)
         coverage_scores.append(analysis.get("coverage_ratio", 0) * 100)
+        misconception_count = len(analysis.get("matched_misconceptions", []) or [])
+        critical_count = len(analysis.get("matched_critical_errors", []) or [])
+        misconception_penalties.append(min(18, misconception_count * 5 + critical_count * 12))
 
         missing = analysis.get("missing_points", [])
+        misconceptions = analysis.get("matched_misconceptions", []) or analysis.get("matched_critical_errors", [])
         if missing:
             evidence.append(
                 f"题目“{record.get('question', '')[:35]}...”中缺少关键点：{'、'.join(missing[:3])}"
+            )
+        elif misconceptions:
+            evidence.append(
+                f"题目“{record.get('question', '')[:35]}...”中出现风险表述：{'、'.join(misconceptions[:2])}"
             )
         else:
             evidence.append(
                 f"题目“{record.get('question', '')[:35]}...”回答覆盖度较好。"
             )
 
-    score = avg(technical_scores) * 0.6 + avg(coverage_scores) * 0.4
+    score = avg(technical_scores) * 0.5 + avg(coverage_scores) * 0.35 + avg([100 - p for p in misconception_penalties], 100) * 0.15
     return clamp(round(score, 1)), evidence[:4]
 
 
@@ -328,7 +311,12 @@ def score_project_depth(records: List[Dict[str, Any]]) -> Tuple[float, List[str]
         has_role = any(x in answer for x in ["负责", "我做", "我的职责", "个人职责", "实现"])
         has_difficulty = any(x in answer for x in ["难点", "问题", "挑战", "瓶颈", "解决"])
         has_result = any(x in answer for x in ["结果", "提升", "降低", "完成", "实现", "优化"])
-        bonus = 50 + 15 * has_role + 20 * has_difficulty + 15 * has_result
+        has_evidence = bool(re.search(r"(qps|tps|rt|tp95|tp99|\d+%|\d+\s*ms|\d+\s*秒|准确率|召回率)", answer, re.I))
+        has_validation = any(x in answer for x in ["测试", "验证", "压测", "日志", "监控", "回归", "指标"])
+        unsupported_metric = has_evidence and not has_validation
+        bonus = 45 + 14 * has_role + 18 * has_difficulty + 13 * has_result + 10 * has_validation
+        if unsupported_metric:
+            bonus -= 6
         detail_bonus.append(bonus)
 
         missing_parts = []
@@ -338,6 +326,8 @@ def score_project_depth(records: List[Dict[str, Any]]) -> Tuple[float, List[str]
             missing_parts.append("技术难点")
         if not has_result:
             missing_parts.append("项目结果")
+        if has_evidence and not has_validation:
+            missing_parts.append("量化指标来源待验证")
         if missing_parts:
             evidence.append(f"项目回答还可补充：{'、'.join(missing_parts)}。")
         else:
@@ -351,12 +341,18 @@ def score_logic(records: List[Dict[str, Any]]) -> Tuple[float, List[str]]:
     if not records:
         return 50.0, ["暂无回答记录，无法充分评估回答逻辑性。"]
 
-    logic_scores = [r.get("analysis", {}).get("logic_score", 0) * 10 for r in records]
+    logic_scores = []
     evidence = []
 
     weak_count = 0
+    shallow_structured_count = 0
     for r in records:
         analysis = r.get("analysis", {})
+        score = analysis.get("logic_score", 0) * 10
+        if analysis.get("coverage_ratio", 0) < 0.35 and score > 75:
+            score = 75
+            shallow_structured_count += 1
+        logic_scores.append(score)
         if analysis.get("logic_score", 0) < 6:
             weak_count += 1
 
@@ -364,8 +360,10 @@ def score_logic(records: List[Dict[str, Any]]) -> Tuple[float, List[str]]:
         evidence.append(f"共有 {weak_count} 个回答结构不够明显，建议使用“背景—问题—方案—结果”结构。")
     else:
         evidence.append("多数回答具有较清晰的逻辑连接词或分层表达。")
+    if shallow_structured_count:
+        evidence.append(f"有 {shallow_structured_count} 个回答虽然有结构词，但关键内容覆盖不足，未按满分逻辑处理。")
 
-    return clamp(round(avg(logic_scores), 1)), evidence
+    return clamp(round(avg(logic_scores), 1), high=96), evidence
 
 
 def score_completeness(records: List[Dict[str, Any]]) -> Tuple[float, List[str]]:
@@ -379,14 +377,22 @@ def score_completeness(records: List[Dict[str, Any]]) -> Tuple[float, List[str]]
         r for r in records
         if r.get("analysis", {}).get("answer_length", 0) < 50
     ]
+    repetitive_answers = [
+        r for r in records
+        if r.get("analysis", {}).get("repetition_ratio", 0) > 0.45
+    ]
 
     evidence = []
     if short_answers:
         evidence.append(f"共有 {len(short_answers)} 个回答偏短，信息量不足。")
     else:
         evidence.append("大多数回答长度较充分，能够展开说明。")
+    if repetitive_answers:
+        evidence.append(f"共有 {len(repetitive_answers)} 个回答存在明显重复，完整性按信息密度保守处理。")
 
     score = avg(length_scores) * 0.7 + avg(coverage_scores, 60) * 0.3
+    if repetitive_answers:
+        score -= min(8, len(repetitive_answers) * 3)
     return clamp(round(score, 1)), evidence
 
 
@@ -431,6 +437,25 @@ def level_from_score(score: float) -> str:
     if score >= 60:
         return "及格"
     return "需要加强"
+
+
+def confidence_from_score_inputs(records: List[Dict[str, Any]], project_count: int, basic_count: int) -> Dict[str, str]:
+    answer_count = len(records or [])
+    project_confidence = "high" if project_count >= 2 else ("medium" if project_count == 1 else "low")
+    basic_confidence = "high" if basic_count >= 3 else ("medium" if basic_count >= 1 else "low")
+    overall = "high"
+    if answer_count < 6 or "low" in {project_confidence, basic_confidence}:
+        overall = "low"
+    elif answer_count < 8 or "medium" in {project_confidence, basic_confidence}:
+        overall = "medium"
+    return {
+        "scoring_confidence": overall,
+        "基础知识掌握程度": basic_confidence,
+        "项目理解深度": project_confidence,
+        "回答逻辑性": "high" if answer_count >= 6 else "medium",
+        "表达完整性": "high" if answer_count >= 6 else "medium",
+        "岗位匹配度": "high" if answer_count >= 4 else "medium",
+    }
 
 
 def collect_common_problems(records: List[Dict[str, Any]]) -> List[str]:
@@ -482,6 +507,11 @@ def build_final_report(records: List[Dict[str, Any]], profile: Dict[str, Any]) -
 
     weighted_total = sum(dimension_scores[k] * WEIGHTS[k] for k in WEIGHTS)
     weighted_total = round(weighted_total, 1)
+    basic_count = len(get_records_by_type(records, BASIC_TYPES))
+    project_count = len(get_records_by_type(records, PROJECT_TYPES))
+    confidence = confidence_from_score_inputs(records, project_count, basic_count)
+    project_evidence_sufficient = project_count >= 2
+    project_evidence_confidence = confidence["项目理解深度"]
 
     strengths = []
     if basic_score >= 75:
@@ -520,6 +550,17 @@ def build_final_report(records: List[Dict[str, Any]], profile: Dict[str, Any]) -
         "level": level_from_score(weighted_total),
         "weights": WEIGHTS,
         "dimension_scores": dimension_scores,
+        "scoring_confidence": confidence["scoring_confidence"],
+        "dimension_confidence": {
+            dim: confidence.get(dim, "medium")
+            for dim in WEIGHTS
+        },
+        "project_evidence_sufficient": project_evidence_sufficient,
+        "project_evidence_confidence": project_evidence_confidence,
+        "project_evidence_note": (
+            "" if project_evidence_sufficient
+            else "本轮项目深挖题数量不足，该维度评价可信度较低。"
+        ),
         "is_incomplete_interview": is_incomplete_interview,
         "incomplete_report_warning": incomplete_report_warning if is_incomplete_interview else "",
         "dimension_details": {
@@ -563,8 +604,8 @@ def build_final_report(records: List[Dict[str, Any]], profile: Dict[str, Any]) -
         "role_ability_coverage": role_ability_coverage,
         "interview_summary": {
             "answer_count": len(records),
-            "basic_question_count": len(get_records_by_type(records, BASIC_TYPES)),
-            "project_question_count": len(get_records_by_type(records, PROJECT_TYPES)),
+            "basic_question_count": basic_count,
+            "project_question_count": project_count,
             "knowledge_ids": [r.get("knowledge_id") for r in records if r.get("knowledge_id")],
             "knowledge_display_ids": [
                 (_display_record(r, profile).get("display_id") or r.get("knowledge_id"))
@@ -600,6 +641,9 @@ def report_to_markdown(report: Dict[str, Any]) -> str:
     lines.append(f"- 基础知识题：{summary.get('basic_question_count', 0)}")
     lines.append(f"- 项目深挖题：{summary.get('project_question_count', 0)}")
     lines.append(f"- 总分与等级：{report.get('total_score')} / 100，{report.get('level')}")
+    lines.append(f"- 评分置信度：{report.get('scoring_confidence', 'medium')}")
+    if not report.get("project_evidence_sufficient", True):
+        lines.append(f"- 项目证据提示：{report.get('project_evidence_note', '本轮项目深挖题数量不足，该维度评价可信度较低。')}")
     lines.append("")
 
     lines.append("## 问题难度与类型分布")
@@ -630,10 +674,11 @@ def report_to_markdown(report: Dict[str, Any]) -> str:
 
     lines.append("## 五维度评分")
     lines.append("")
-    lines.append("| 维度 | 权重 | 分数 |")
-    lines.append("|---|---:|---:|")
+    lines.append("| 维度 | 权重 | 分数 | 置信度 |")
+    lines.append("|---|---:|---:|---|")
+    dimension_confidence = report.get("dimension_confidence", {}) or {}
     for dim, detail in report.get("dimension_details", {}).items():
-        lines.append(f"| {dim} | {detail.get('weight')} | {detail.get('score')} |")
+        lines.append(f"| {dim} | {detail.get('weight')} | {detail.get('score')} | {dimension_confidence.get(dim, 'medium')} |")
     lines.append("")
     lines.append("## 评分依据")
     lines.append("")

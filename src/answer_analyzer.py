@@ -14,7 +14,14 @@ TECH_KEYWORDS = [
     "本地消息表", "Lua", "Lua 脚本", "布隆过滤器", "数据库事务", "索引优化", "缓存一致性",
     "Kubernetes", "Milvus", "FAISS", "大语言模型", "大模型 API", "上下文管理", "上下文压缩",
     "结构化输出", "模型评估", "AI 工程化", "模型调用", "检索增强生成", "TypeScript",
-    "Vue", "React", "Element Plus", "前端工程化", "组件化", "状态管理", "响应式布局"
+    "Vue", "React", "Element Plus", "前端工程化", "组件化", "状态管理", "响应式布局",
+    "测试用例设计", "等价类划分", "边界值分析", "判定表", "场景法", "错误推测",
+    "冒烟测试", "回归测试", "接口测试", "自动化测试", "pytest", "Selenium",
+    "Playwright", "Mock", "测试隔离", "fixture", "参数化", "Flaky Test",
+    "性能测试", "压力测试", "负载测试", "稳定性测试", "TP95", "TP99",
+    "吞吐量", "并发用户", "缺陷生命周期", "严重程度", "优先级", "缺陷管理",
+    "日志分析", "异常场景", "测试数据准备", "发布准入", "安全测试", "可测试性",
+    "LLM 输出测试", "Prompt 鲁棒性", "RAG 相关性测试", "JSON 合法性", "fallback 测试"
 ]
 
 LOGIC_MARKERS = [
@@ -53,6 +60,12 @@ SEMANTIC_GROUPS = [
     {"上下文管理", "上下文压缩", "结构化输出", "json输出", "schema", "模型评估"},
     {"前端", "vue", "react", "typescript", "组件化", "状态管理", "响应式布局"},
     {"技术栈", "技术能力", "python", "go", "java", "flask", "fastapi", "gin", "mysql", "redis", "rabbitmq", "vue", "typescript"},
+    {"测试", "测试用例", "等价类", "边界值", "判定表", "场景法", "错误推测"},
+    {"接口测试", "api测试", "postman", "pytest", "requests", "mock", "fixture", "参数化"},
+    {"自动化测试", "selenium", "playwright", "cypress", "e2e", "回归测试", "冒烟测试"},
+    {"性能测试", "压力测试", "负载测试", "稳定性测试", "tp95", "tp99", "吞吐量", "并发用户"},
+    {"缺陷", "缺陷管理", "严重程度", "优先级", "缺陷生命周期", "日志分析", "异常场景"},
+    {"llm 输出测试", "prompt 鲁棒性", "rag 相关性测试", "json 合法性", "fallback 测试", "多轮上下文测试"},
     {"项目经历", "项目", "系统", "平台", "模块", "秒杀", "ai模拟面试", "ai 模拟面试", "校园二手交易", "交易平台"},
     {"目标岗位", "岗位匹配", "后端开发", "ai应用开发", "ai 应用开发", "求职方向", "适合"},
     {"个人职责", "我负责", "我设计", "我实现", "我主导", "我的方案", "核心开发", "负责模块", "个人贡献"},
@@ -213,6 +226,47 @@ def calculate_coverage(answer: str, reference_points: List[str]) -> Dict[str, An
     }
 
 
+def _collect_optional_points(question_meta: Dict[str, Any], keys: List[str]) -> List[str]:
+    values = []
+    for key in keys:
+        raw = question_meta.get(key, [])
+        if isinstance(raw, str):
+            raw = [raw]
+        if isinstance(raw, list):
+            values.extend(str(item).strip() for item in raw if str(item).strip())
+    return list(dict.fromkeys(values))
+
+
+def detect_misconceptions(question_meta: Dict[str, Any], answer: str) -> Dict[str, Any]:
+    misconception_points = _collect_optional_points(
+        question_meta,
+        ["common_mistakes", "misconceptions", "negative_signals", "bad_answer_signals"],
+    )
+    critical_points = _collect_optional_points(question_meta, ["critical_errors"])
+    matched_misconceptions = [
+        item for item in misconception_points
+        if len(item) >= 4 and point_is_covered(item, answer)
+    ]
+    matched_critical = [
+        item for item in critical_points
+        if len(item) >= 4 and point_is_covered(item, answer)
+    ]
+    return {
+        "matched_misconceptions": matched_misconceptions[:5],
+        "matched_critical_errors": matched_critical[:5],
+        "misconception_count": len(matched_misconceptions),
+        "critical_error_count": len(matched_critical),
+    }
+
+
+def repetition_ratio(answer: str) -> float:
+    tokens = tokenize_for_match(answer)
+    if len(tokens) < 12:
+        return 0.0
+    unique_count = len(set(tokens))
+    return round(1 - unique_count / max(1, len(tokens)), 2)
+
+
 def analyze_answer(question_meta: Dict[str, Any], user_answer: str) -> Dict[str, Any]:
     """Analyze one user answer with simple, explainable rules.
 
@@ -224,6 +278,7 @@ def analyze_answer(question_meta: Dict[str, Any], user_answer: str) -> Dict[str,
 
     reference_points = build_reference_points(question_meta)
     coverage = calculate_coverage(answer, reference_points)
+    misconception_result = detect_misconceptions(question_meta, answer)
     question_type = question_meta.get("type") or question_meta.get("question_type")
     if question_type in {"intro", "project", "project_followup"} and answer_len < 50:
         coverage["coverage_ratio"] = min(coverage["coverage_ratio"], 0.4)
@@ -232,9 +287,24 @@ def analyze_answer(question_meta: Dict[str, Any], user_answer: str) -> Dict[str,
     has_example = any(marker in answer for marker in ["例如", "比如", "项目中", "实际", "场景"])
     has_result = any(marker in answer for marker in ["结果", "提升", "降低", "完成", "实现", "优化"])
 
+    repeat_ratio = repetition_ratio(answer)
     length_score = min(10, max(2, answer_len // 18))
-    logic_score = min(10, 4 + logic_count * 2 + (1 if has_example else 0) + (1 if has_result else 0))
-    technical_score = min(10, 3 + len(keywords) + int(coverage["coverage_ratio"] * 5))
+    if answer_len > 900 and repeat_ratio > 0.45:
+        length_score = min(length_score, 7)
+    elif answer_len > 1400:
+        length_score = min(length_score, 8)
+
+    logic_score = min(9, 4 + min(logic_count, 3) * 1.2 + (1 if has_example else 0) + (1 if has_result else 0))
+    if coverage["coverage_ratio"] < 0.35:
+        logic_score = min(logic_score, 7)
+    if answer_len < 80 and logic_count >= 3:
+        logic_score = min(logic_score, 7)
+
+    technical_score = min(10, 3 + min(len(keywords), 5) + int(coverage["coverage_ratio"] * 4))
+    if misconception_result["matched_misconceptions"]:
+        technical_score = max(2, technical_score - min(3, misconception_result["misconception_count"]))
+    if misconception_result["matched_critical_errors"]:
+        technical_score = max(1, technical_score - 4)
 
     if answer_len < 30:
         overall = min(5, (length_score + logic_score + technical_score) // 3)
@@ -256,6 +326,15 @@ def analyze_answer(question_meta: Dict[str, Any], user_answer: str) -> Dict[str,
     if question_meta.get("type") == "project" and not has_result:
         problems.append("项目回答缺少结果或效果描述")
         suggestions.append("补充项目成果、性能提升、用户价值或个人贡献")
+    if misconception_result["matched_misconceptions"]:
+        problems.append("回答中出现了常见误区或风险表述")
+        suggestions.append("复盘该知识点的适用边界，避免把经验性结论说成绝对结论")
+    if misconception_result["matched_critical_errors"]:
+        problems.append("回答中出现了严重技术性错误")
+        suggestions.append("优先纠正该技术判断，再补充正确原理和验证方式")
+    if answer_len > 900 and repeat_ratio > 0.45:
+        problems.append("回答存在明显重复，信息密度偏低")
+        suggestions.append("减少重复表述，保留结论、依据、例子和边界条件")
 
     needs_followup = (
         answer_len < 70
@@ -273,6 +352,9 @@ def analyze_answer(question_meta: Dict[str, Any], user_answer: str) -> Dict[str,
         "logic_score": logic_score,
         "technical_score": technical_score,
         "overall_temp_score": overall,
+        "repetition_ratio": repeat_ratio,
+        "matched_misconceptions": misconception_result["matched_misconceptions"],
+        "matched_critical_errors": misconception_result["matched_critical_errors"],
         "problems": problems,
         "suggestions": suggestions,
         "needs_followup": needs_followup
