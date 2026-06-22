@@ -8,6 +8,7 @@ from datetime import datetime
 import streamlit.components.v1 as components
 
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 
 from src.answer_analyzer import analyze_answer, summarize_interview_records
 from src.evaluator import build_final_report, report_to_markdown
@@ -818,6 +819,15 @@ def build_session_payload(status=None):
     }
 
 
+def set_session_state_value(key, value, *, skip_if_widget_locked=False):
+    try:
+        st.session_state[key] = value
+    except StreamlitAPIException:
+        if skip_if_widget_locked:
+            return
+        raise
+
+
 def restore_session_state(session_data):
     st.session_state.current_session_id = session_data.get("session_id")
     st.session_state.current_session_title = session_data.get("title") or "未命名面试"
@@ -840,8 +850,16 @@ def restore_session_state(session_data):
     st.session_state.question_meta = session_data.get("question_meta", [])
     st.session_state.current_question_meta = session_data.get("current_question_meta")
     st.session_state.interview_records = session_data.get("interview_records", [])
-    st.session_state.show_immediate_answer_feedback = bool(session_data.get("show_immediate_answer_feedback", True))
-    st.session_state.use_llm_answer_feedback = bool(session_data.get("use_llm_answer_feedback", True))
+    set_session_state_value(
+        "show_immediate_answer_feedback",
+        bool(session_data.get("show_immediate_answer_feedback", True)),
+        skip_if_widget_locked=True,
+    )
+    set_session_state_value(
+        "use_llm_answer_feedback",
+        bool(session_data.get("use_llm_answer_feedback", True)),
+        skip_if_widget_locked=True,
+    )
     st.session_state.overall_answer_feedback = session_data.get("overall_answer_feedback")
     st.session_state.overall_answer_feedback_key = session_data.get("overall_answer_feedback_key", "")
     st.session_state.followup_count = session_data.get("followup_count", 0)
