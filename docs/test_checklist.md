@@ -158,6 +158,9 @@
 - [ ] 目录和交叉引用已更新。
 - [ ] README 和 Markdown 文档中引用的所有图片文件均存在。
 - [ ] `docs/assets/answer_analysis_export.png` 可正常读取。
+- [ ] `docs/assets/answer_analysis_summary.png` 可正常解码。
+- [ ] README 中的总体分析图片链接有效。
+- [ ] 三层反馈的文档表述相互一致。
 - [ ] 仓库不存在 `answer_analysis.png` 的失效引用。
 - [ ] PDF 所有页面已渲染检查。
 - [ ] PDF 页面尺寸为 A4。

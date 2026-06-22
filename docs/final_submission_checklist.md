@@ -17,6 +17,11 @@
 - [ ] 导出文件不包含完整参考答案。
 - [ ] 即时分析与最终评分边界说明清楚。
 - [ ] README 已展示合并后的 `answer_analysis_export.png`。
+- [ ] README 已展示 `answer_analysis_summary.png`。
+- [ ] 总体回答分析已使用弱、中、强三类回答测试。
+- [ ] 总体分析能够呈现跨题规律，而不是简单复制单题反馈。
+- [ ] 总体分析与最终五维报告的边界说明清楚。
+- [ ] 三张反馈相关截图职责清楚且无重复失效链接。
 - [ ] README 与 Markdown 设计文档已同步。
 - [ ] 仓库不存在旧 `answer_analysis.png` 引用。
 - [ ] `.env` 未提交。
@@ -31,7 +36,7 @@
 
 - [ ] `docs/Project_Design_Document.md` 已更新。
 - [ ] 仓库内 `docs/Project_Design_Document.pdf` 已复制自桌面最终 PDF。
-- [ ] 正式设计 PDF 已由用户手动更新，本轮未重新生成。
+- [ ] 正式设计 PDF 由用户手动维护，Codex 未修改。
 - [ ] `docs/Project_Design_Document.pdf` 可正常打开。
 - [ ] `docs/Project_Design_Document.pdf` 为用户确认的最终固定排版版本。
 - [ ] `docs/Project_Design_Document.md` 仅作为 GitHub 在线阅读版本。
@@ -60,6 +65,7 @@
 - [ ] 展示回答分析和修改重交。
 - [ ] 演示视频展示一次即时分析。
 - [ ] 演示视频展示即时分析与逐题导出。
+- [ ] 演示视频已展示总体回答分析。
 - [ ] 展示五维度评分报告。
 - [ ] 展示 Markdown / JSON / PNG 导出。
 - [ ] 展示能力成长曲线。

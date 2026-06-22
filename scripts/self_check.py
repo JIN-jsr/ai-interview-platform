@@ -78,6 +78,7 @@ EXPECTED_ASSETS = [
     "docs/assets/rag_evidence.png",
     "docs/assets/interview_workspace.png",
     "docs/assets/answer_analysis_export.png",
+    "docs/assets/answer_analysis_summary.png",
     "docs/assets/final_report_dashboard.png",
     "docs/assets/ability_growth_curve.png",
     "docs/assets/report_full_long.png",
@@ -509,21 +510,27 @@ def check_assets(reporter: Reporter) -> None:
         except Exception as exc:
             reporter.error_msg(f"图片无法读取：{rel}，{exc}")
 
-    feedback_asset = "docs/assets/answer_analysis_export.png"
-    ignored = is_ignored(feedback_asset)
-    if ignored is True:
-        reporter.error_msg(f"答后即时分析合并截图被 .gitignore 忽略：{feedback_asset}")
-    elif ignored is False:
-        reporter.ok_msg(f"答后即时分析合并截图可被 Git 跟踪：{feedback_asset}")
-    else:
-        reporter.warn_msg(f"无法确认答后即时分析合并截图 Git 状态：{feedback_asset}")
-
     reference_sources = ["README.md", "docs/Project_Design_Document.md", "docs/assets/README.md"]
-    referenced_by = [rel for rel in reference_sources if "answer_analysis_export.png" in read_text_safe(rel)]
-    if referenced_by:
-        reporter.ok_msg("答后即时分析合并截图已被文档引用：" + "、".join(referenced_by))
-    else:
-        reporter.error_msg("答后即时分析合并截图未被 README 或设计文档引用。")
+    required_doc_assets = {
+        "docs/assets/answer_analysis_export.png": "答后即时分析合并截图",
+        "docs/assets/answer_analysis_summary.png": "总体回答分析截图",
+        "docs/assets/final_report_dashboard.png": "最终五维评分报告截图",
+    }
+    for asset, label in required_doc_assets.items():
+        ignored = is_ignored(asset)
+        if ignored is True:
+            reporter.error_msg(f"{label} 被 .gitignore 忽略：{asset}")
+        elif ignored is False:
+            reporter.ok_msg(f"{label} 可被 Git 跟踪：{asset}")
+        else:
+            reporter.warn_msg(f"无法确认 {label} Git 状态：{asset}")
+
+        filename = Path(asset).name
+        referenced_by = [rel for rel in reference_sources if filename in read_text_safe(rel)]
+        if referenced_by:
+            reporter.ok_msg(f"{label} 已被文档引用：" + "、".join(referenced_by))
+        else:
+            reporter.error_msg(f"{label} 未被 README 或设计文档引用：{filename}")
 
 
 def check_final_pdf(reporter: Reporter) -> None:
@@ -792,6 +799,22 @@ def check_documentation_consistency(reporter: Reporter) -> None:
     else:
         reporter.ok_msg("文档未发现 LLM 改分或导出完整参考答案的误导表述。")
 
+
+    boundary_pairs = [
+        ("单题即时分析", "当前回答"),
+        ("总体回答分析", "跨题"),
+        ("最终五维报告", "综合能力评价"),
+    ]
+    for left, right in boundary_pairs:
+        if left in combined and right in combined:
+            reporter.ok_msg(f"三层反馈边界表述存在：{left} / {right}")
+        else:
+            reporter.warn_msg(f"三层反馈边界建议补充：{left} / {right}")
+
+    if "总体回答分析" in combined and "不直接修改最终五维评分" in combined:
+        reporter.ok_msg("总体回答分析已说明不直接修改最终五维评分。")
+    else:
+        reporter.warn_msg("建议明确总体回答分析不直接修改最终五维评分。")
     active_old_image = re.search(r"!\[[^\]]*\]\([^)]*answer_analysis\.png\)", combined)
     if active_old_image:
         reporter.error_msg("文档仍存在旧截图 answer_analysis.png 的活跃图片引用。")

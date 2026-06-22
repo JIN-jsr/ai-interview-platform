@@ -12,6 +12,7 @@
 | `sidebar_navigation_02.png` | 左侧栏的更多功能与系统状态区域，包含 RAG 知识库、项目说明与运行检查、能力成长曲线、演示模式和 LLM 状态 | 页面截图 | 设计文档 | 虚构演示数据 |
 | `interview_workspace.png` | 模拟面试工作区、问题详情、生成方式、RAG 出题依据、回答分析区域、进度与实时状态 | 页面截图 | README、设计文档 | 虚构演示数据 |
 | `answer_analysis_export.png` | 答后即时分析、修改重答及逐题复盘导出 | 页面与导出组合截图，2108 x 1436 | README、Markdown 设计文档、演示视频参考 | 虚构演示数据 |
+| `answer_analysis_summary.png` | 总体回答分析，展示跨题稳定优势、重复遗漏、风险模式和优先改进路径 | 页面截图，2110 x 1346 | README、Markdown 设计文档、演示视频参考 | 虚构演示数据 |
 | `rag_evidence.png` | RAG 出题依据、知识点与预期要点 | 页面截图 | 设计文档 | 虚构演示数据 |
 | `final_report_dashboard.png` | 评分报告仪表盘 | 页面截图 | README、设计文档 | 虚构演示数据 |
 | `ability_growth_curve.png` | 能力成长曲线与历史报告对比 | 页面截图 | 设计文档 | 虚构演示数据 |
